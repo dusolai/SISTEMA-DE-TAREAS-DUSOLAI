@@ -1,0 +1,8 @@
+
+{
+  "name": "Dusolai: Audio-First Task Management",
+  "description": "An audio-first task management platform that allows you to create tasks by speaking. It uses AI to transcribe your voice, extract key details, and organize your work in a real-time Kanban board.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
