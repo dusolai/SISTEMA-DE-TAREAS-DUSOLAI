@@ -1,4 +1,3 @@
-
 export interface Task {
   id: string;
   created_at: string;
@@ -8,12 +7,18 @@ export interface Task {
   project_id: string | null;
   description: string | null;
   order: number;
-  progress: number;
+  progress: number; // 0 a 100
   assigned_to: string | null;
   created_by: string;
   audio_url?: string;
   transcription?: string;
   ai_extracted?: AiExtractedData;
+}
+
+export interface Subtask {
+    id: string;
+    text: string;
+    completed: boolean;
 }
 
 export interface AiExtractedData {
@@ -26,8 +31,9 @@ export interface AiExtractedData {
     needs_clarification: boolean;
     clarification_question: string | null;
     confidence_score: number;
+    // Nuevo campo para los pasos sugeridos
+    suggested_subtasks: Subtask[];
 }
-
 
 export const KANBAN_COLUMNS: Array<{id: Task['status'], title: string}> = [
     { id: 'todo', title: 'Todo' },
