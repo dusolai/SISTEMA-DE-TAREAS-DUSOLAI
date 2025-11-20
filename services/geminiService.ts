@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { AiExtractedData } from '../types';
+import { AiExtractedData, Subtask } from '../types';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -10,79 +10,104 @@ if (!apiKey) {
 const ai = new GoogleGenAI({ apiKey });
 const model = 'gemini-2.5-flash';
 
-// Prompt mejorado para solicitar subtareas
-const prompt = `You are an expert task management assistant. Your goal is to extract structured information from Spanish audio recordings AND break down the task into actionable subtasks.
-
+// --- PROMPT 1: CREACIÓN (YA LO TENÍAS) ---
+const createPrompt = `You are an expert task management assistant. Extract structured info from Spanish audio.
 Structure:
 {
-  "title": "string (3-8 words, actionable verb)",
-  "project": "string (project name or 'Inbox')",
+  "title": "string",
+  "project": "string",
   "priority": "'high' | 'medium' | 'low'",
-  "context": "string (detailed description)",
-  "due_date": "'YYYY-MM-DD' or null",
+  "context": "string",
+  "due_date": "string | null",
   "tags": "string[]",
   "needs_clarification": "boolean",
-  "clarification_question": "string or null",
-  "confidence_score": "float 0.0-1.0",
-  "subtasks_text": "string[] (3-6 actionable steps to complete the task)"
+  "clarification_question": "string | null",
+  "confidence_score": "number",
+  "subtasks_text": "string[] (3-6 actionable steps)"
 }
+Input audio:`;
 
-Extraction Rules:
-1. **title**: Concise main action.
-2. **subtasks_text**: Break the task down into logical steps. Example: If task is "Create website", steps: ["Buy domain", "Design mockup", "Code HTML", "Deploy"].
-3. **priority**: Infer urgency.
-4. **needs_clarification**: True only if critical info is missing.
+// --- PROMPT 2: GENERAR SOLO SUBTAREAS (TEXTO) ---
+const subtasksPrompt = `You are a productivity expert. Given a task title and description, generate a checklist of 3 to 6 actionable subtasks to complete it.
+Return ONLY a JSON array of strings. Example: ["Step 1", "Step 2"].
+Task Title: `;
 
-Analyze the following audio recording:`;
+// --- PROMPT 3: ACTUALIZAR TAREA CON AUDIO ---
+const updatePrompt = `You are updating an EXISTING task based on new audio instructions.
+Current Task JSON:
+`;
 
+// 1. CREAR TAREA (EXISTENTE)
 export const extractTaskFromAudio = async (audioBase64: string, mimeType: string): Promise<AiExtractedData> => {
     try {
         const response = await ai.models.generateContent({
             model,
-            contents: {
-                parts: [
-                    { text: prompt },
-                    { inlineData: { data: audioBase64, mimeType } }
-                ]
-            },
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        title: { type: Type.STRING },
-                        project: { type: Type.STRING },
-                        priority: { type: Type.STRING, enum: ['high', 'medium', 'low'] },
-                        context: { type: Type.STRING },
-                        due_date: { type: Type.STRING, nullable: true },
-                        tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-                        needs_clarification: { type: Type.BOOLEAN },
-                        clarification_question: { type: Type.STRING, nullable: true },
-                        confidence_score: { type: Type.NUMBER },
-                        subtasks_text: { type: Type.ARRAY, items: { type: Type.STRING } }
-                    },
-                    required: ['title', 'project', 'priority', 'context', 'needs_clarification', 'confidence_score', 'subtasks_text']
-                }
-            }
+            contents: { parts: [{ text: createPrompt }, { inlineData: { data: audioBase64, mimeType } }] },
+            config: { responseMimeType: 'application/json' }
         });
         
-        const jsonText = response.text.trim();
-        const rawData = JSON.parse(jsonText);
-
-        // Transformamos los textos simples en objetos Subtask
+        const rawData = JSON.parse(response.text.trim());
         const suggested_subtasks = (rawData.subtasks_text || []).map((text: string, index: number) => ({
             id: `st-${Date.now()}-${index}`,
             text,
             completed: false
         }));
-
-        return {
-            ...rawData,
-            suggested_subtasks
-        };
-
+        return { ...rawData, suggested_subtasks };
     } catch (error) {
-        console.error("Error extracting task from audio:", error);
-        throw new Error("Failed to process audio with Gemini.");
+        console.error("Error Gemini:", error);
+        throw error;
+    }
+};
+
+// 2. NUEVO: GENERAR PLAN DESDE TEXTO
+export const generateSubtasksFromText = async (title: string, description: string): Promise<Subtask[]> => {
+    try {
+        const fullPrompt = `${subtasksPrompt} "${title}". \nContext: "${description}". \nJSON Response:`;
+        const response = await ai.models.generateContent({
+            model,
+            contents: { parts: [{ text: fullPrompt }] },
+            config: { responseMimeType: 'application/json' }
+        });
+
+        const steps: string[] = JSON.parse(response.text.trim());
+        return steps.map((text, index) => ({
+            id: `gen-${Date.now()}-${index}`,
+            text,
+            completed: false
+        }));
+    } catch (error) {
+        console.error("Error generating subtasks:", error);
+        return [];
+    }
+};
+
+// 3. NUEVO: ACTUALIZAR TAREA CON AUDIO
+export const updateTaskWithAudio = async (currentTask: any, audioBase64: string, mimeType: string): Promise<any> => {
+    try {
+        const fullPrompt = `${updatePrompt} ${JSON.stringify(currentTask)} \n\n Analyze the audio and merge the new information. Update title, description, priority or status if mentioned. If user adds steps, append them to 'subtasks_text'. Return the full updated JSON structure.`;
+        
+        const response = await ai.models.generateContent({
+            model,
+            contents: { parts: [{ text: fullPrompt }, { inlineData: { data: audioBase64, mimeType } }] },
+            config: { responseMimeType: 'application/json' }
+        });
+        
+        const updatedData = JSON.parse(response.text.trim());
+        
+        // Re-mapear subtareas si vienen como texto plano
+        if (updatedData.subtasks_text && Array.isArray(updatedData.subtasks_text)) {
+             const newSubtasks = updatedData.subtasks_text.map((text: string, index: number) => ({
+                id: `upd-${Date.now()}-${index}`,
+                text,
+                completed: false
+            }));
+            // Combinamos con cuidado o reemplazamos según prefieras. Aquí reemplazamos para simplificar la sincronización.
+            updatedData.suggested_subtasks = newSubtasks;
+        }
+        
+        return updatedData;
+    } catch (error) {
+        console.error("Error updating task:", error);
+        throw error;
     }
 };
