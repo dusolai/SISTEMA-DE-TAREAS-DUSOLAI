@@ -3,6 +3,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../../types';
 import { GripVertical, AlertTriangle, ArrowDown, ArrowUp, Minus } from 'lucide-react';
+// 1. IMPORTAMOS EL STORE AQUÍ
+import { useUIStore } from '../../../store/uiStore';
 
 interface TaskCardProps {
     task: Task;
@@ -16,6 +18,9 @@ const priorityConfig = {
 
 const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+    
+    // 2. OBTENEMOS LA FUNCIÓN PARA ABRIR EL MODAL
+    const { openTaskModal } = useUIStore();
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -24,8 +29,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         opacity: isDragging ? 0.5 : 1,
     };
 
-    // Verificamos si hay datos extraídos por IA
-    const aiData = task.ai_extracted as any; // Casting simple para acceder al JSONB
+    const aiData = task.ai_extracted as any;
     const needsClarification = aiData?.needs_clarification;
 
     const priority = (task.priority as keyof typeof priorityConfig) || 'medium';
@@ -36,9 +40,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             ref={setNodeRef}
             style={style}
             {...attributes}
+            // 3. AÑADIMOS EL EVENTO CLICK AQUÍ
+            // Esto hace que al hacer clic, se abra el modal con los datos de ESTA tarea
+            onClick={() => openTaskModal(task)}
             className={`
                 group relative bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-700/50 
-                hover:border-gray-600 hover:shadow-md transition-all touch-none
+                hover:border-gray-600 hover:shadow-md transition-all touch-none cursor-pointer
                 ${needsClarification ? 'ring-2 ring-yellow-500/50 border-yellow-500/20' : ''}
             `}
         >
@@ -57,7 +64,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                     <span>{priority}</span>
                 </div>
 
-                {/* Indicador de IA: Needs Clarification */}
                 {needsClarification && (
                     <div className="flex items-center text-yellow-400 text-xs font-medium gap-1 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
                         <AlertTriangle className="h-3 w-3" />
