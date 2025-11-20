@@ -2,9 +2,9 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./features/**/*.{js,ts,jsx,tsx}", 
-    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./*.{js,ts,jsx,tsx}",             // Busca en archivos de la raíz (App.tsx, index.tsx)
+    "./features/**/*.{js,ts,jsx,tsx}", // Busca en features
+    "./pages/**/*.{js,ts,jsx,tsx}",    // Busca en pages
     "./components/**/*.{js,ts,jsx,tsx}"
   ],
   darkMode: 'class',
