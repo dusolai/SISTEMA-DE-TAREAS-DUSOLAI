@@ -1,62 +1,39 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { AiExtractedData } from '../types';
 
-// CORRECTED: Use import.meta.env for client-side Vite projects.
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 if (!apiKey) {
-    throw new Error("VITE_GEMINI_API_KEY is not defined. Please check your .env.local file.");
+    throw new Error("VITE_GEMINI_API_KEY is not defined.");
 }
 
 const ai = new GoogleGenAI({ apiKey });
-
 const model = 'gemini-2.5-flash';
 
-const prompt = `You are an expert task management assistant. Your goal is to extract structured information from Spanish audio recordings. You MUST return ONLY a valid JSON object with the specified structure.
+// Prompt mejorado para solicitar subtareas
+const prompt = `You are an expert task management assistant. Your goal is to extract structured information from Spanish audio recordings AND break down the task into actionable subtasks.
 
 Structure:
 {
   "title": "string (3-8 words, actionable verb)",
   "project": "string (project name or 'Inbox')",
   "priority": "'high' | 'medium' | 'low'",
-  "context": "string (additional details)",
+  "context": "string (detailed description)",
   "due_date": "'YYYY-MM-DD' or null",
   "tags": "string[]",
   "needs_clarification": "boolean",
   "clarification_question": "string or null",
-  "confidence_score": "float 0.0-1.0"
+  "confidence_score": "float 0.0-1.0",
+  "subtasks_text": "string[] (3-6 actionable steps to complete the task)"
 }
 
 Extraction Rules:
-1. **title**: Extract the main action. Be concise. Example: "Llamar a Juan sobre presupuesto" NOT "Necesito llamar a Juan".
-2. **priority**:
-   - HIGH: for "urgente", "asap", "crítico", "inmediatamente", "hoy".
-   - LOW: for "algún día", "tal vez", "eventualmente".
-   - DEFAULT: "medium".
-3. **due_date**:
-   - "mañana" -> calculate tomorrow's date.
-   - "la próxima semana" -> calculate next Monday's date.
-   - "en 3 días" -> calculate date in 3 days.
-4. **project**: Infer from context or use "Inbox" if none is mentioned.
-5. **needs_clarification**: Only true if the action is ambiguous or critical information is missing.
-6. **confidence_score**: Your confidence in the extraction accuracy from 0.0 to 1.0.
+1. **title**: Concise main action.
+2. **subtasks_text**: Break the task down into logical steps. Example: If task is "Create website", steps: ["Buy domain", "Design mockup", "Code HTML", "Deploy"].
+3. **priority**: Infer urgency.
+4. **needs_clarification**: True only if critical info is missing.
 
-Example based on a transcription of an audio:
-Input transcription: "necesito llamar a Sarah sobre la campaña de marketing, es bastante urgente"
-Example Output:
-{
-  "title": "Llamar a Sarah sobre campaña de marketing",
-  "project": "Marketing",
-  "priority": "high",
-  "context": "Discutir campaña de marketing",
-  "due_date": null,
-  "tags": ["llamada", "marketing"],
-  "needs_clarification": false,
-  "clarification_question": null,
-  "confidence_score": 0.95
-}
-
-Now, analyze the following audio recording and extract the task information:`;
+Analyze the following audio recording:`;
 
 export const extractTaskFromAudio = async (audioBase64: string, mimeType: string): Promise<AiExtractedData> => {
     try {
@@ -81,15 +58,29 @@ export const extractTaskFromAudio = async (audioBase64: string, mimeType: string
                         tags: { type: Type.ARRAY, items: { type: Type.STRING } },
                         needs_clarification: { type: Type.BOOLEAN },
                         clarification_question: { type: Type.STRING, nullable: true },
-                        confidence_score: { type: Type.NUMBER }
+                        confidence_score: { type: Type.NUMBER },
+                        subtasks_text: { type: Type.ARRAY, items: { type: Type.STRING } }
                     },
-                    required: ['title', 'project', 'priority', 'context', 'needs_clarification', 'confidence_score']
+                    required: ['title', 'project', 'priority', 'context', 'needs_clarification', 'confidence_score', 'subtasks_text']
                 }
             }
         });
         
         const jsonText = response.text.trim();
-        return JSON.parse(jsonText);
+        const rawData = JSON.parse(jsonText);
+
+        // Transformamos los textos simples en objetos Subtask
+        const suggested_subtasks = (rawData.subtasks_text || []).map((text: string, index: number) => ({
+            id: `st-${Date.now()}-${index}`,
+            text,
+            completed: false
+        }));
+
+        return {
+            ...rawData,
+            suggested_subtasks
+        };
+
     } catch (error) {
         console.error("Error extracting task from audio:", error);
         throw new Error("Failed to process audio with Gemini.");
