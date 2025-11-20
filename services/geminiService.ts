@@ -60,9 +60,23 @@ export const extractTaskFromAudio = async (audioBase64: string, mimeType: string
 };
 
 // 2. NUEVO: GENERAR PLAN DESDE TEXTO
-export const generateSubtasksFromText = async (title: string, description: string): Promise<Subtask[]> => {
+export const generateSubtasksFromText = async (
+    title: string, 
+    description: string,
+    customInstructions?: string // <--- Nuevo parámetro opcional
+): Promise<Subtask[]> => {
     try {
-        const fullPrompt = `${subtasksPrompt} "${title}". \nContext: "${description}". \nJSON Response:`;
+        // Construimos un prompt más dinámico
+        let instructions = "Generate a checklist of 3 to 6 actionable subtasks to complete it.";
+        if (customInstructions) {
+            instructions = `The user has specific requirements: "${customInstructions}". Generate the checklist following strictly these instructions.`;
+        }
+
+        const fullPrompt = `You are a productivity expert. Given a task title and description. ${instructions}
+        Task Title: "${title}". 
+        Context: "${description}". 
+        Return ONLY a valid JSON array of strings. Example: ["Step 1", "Step 2"].`;
+
         const response = await ai.models.generateContent({
             model,
             contents: { parts: [{ text: fullPrompt }] },
@@ -80,7 +94,6 @@ export const generateSubtasksFromText = async (title: string, description: strin
         return [];
     }
 };
-
 // 3. NUEVO: ACTUALIZAR TAREA CON AUDIO
 export const updateTaskWithAudio = async (currentTask: any, audioBase64: string, mimeType: string): Promise<any> => {
     try {
