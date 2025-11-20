@@ -2,7 +2,7 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '../../../types';
-import { GripVertical, AlertTriangle, ArrowDown, ArrowUp, Minus, AlignLeft } from 'lucide-react';
+import { GripVertical, AlertTriangle, ArrowDown, ArrowUp, Minus, CheckCircle2 } from 'lucide-react';
 import { useUIStore } from '../../../store/uiStore';
 
 interface TaskCardProps {
@@ -10,9 +10,9 @@ interface TaskCardProps {
 }
 
 const priorityConfig = {
-    high: { color: 'bg-red-500/10 text-red-300 border-red-500/20', icon: <ArrowUp className="h-3 w-3" /> },
-    medium: { color: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20', icon: <Minus className="h-3 w-3" /> },
-    low: { color: 'bg-green-500/10 text-green-300 border-green-500/20', icon: <ArrowDown className="h-3 w-3" /> },
+    high: { color: 'text-red-400 bg-red-400/10 border-red-400/20', icon: <ArrowUp className="h-3 w-3" /> },
+    medium: { color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20', icon: <Minus className="h-3 w-3" /> },
+    low: { color: 'text-green-400 bg-green-400/10 border-green-400/20', icon: <ArrowDown className="h-3 w-3" /> },
 };
 
 const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
@@ -28,6 +28,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
     const aiData = task.ai_extracted as any;
     const needsClarification = aiData?.needs_clarification;
+    const progress = task.progress || 0;
 
     const priority = (task.priority as keyof typeof priorityConfig) || 'medium';
     const pConfig = priorityConfig[priority];
@@ -44,7 +45,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                 ${needsClarification ? 'ring-1 ring-yellow-500/50 border-yellow-500/30 bg-yellow-500/5' : ''}
             `}
         >
-            {/* Cabecera: Título y Grip */}
             <div className="flex justify-between items-start gap-3">
                 <h4 className="text-gray-100 font-medium text-sm leading-snug break-words flex-1">
                     {task.title}
@@ -54,29 +54,32 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                 </div>
             </div>
             
-            {/* Preview de Descripción (Si existe) */}
-            {task.description && (
-                <div className="flex items-start gap-2 text-gray-400">
-                    <AlignLeft size={12} className="mt-0.5 shrink-0 opacity-50" />
-                    <p className="text-xs line-clamp-2 leading-relaxed opacity-80">
-                        {task.description}
-                    </p>
+            {/* Barra de Progreso (Si hay subtareas iniciadas) */}
+            {progress > 0 && (
+                <div className="w-full bg-gray-700/50 h-1.5 rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-500" 
+                        style={{ width: `${progress}%` }} 
+                    />
                 </div>
             )}
 
-            {/* Footer: Prioridad y Avisos */}
-            <div className="flex items-center justify-between pt-1 border-t border-gray-700/30 mt-1">
-                <div className={`flex items-center space-x-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${pConfig.color}`}>
+            <div className="flex items-center justify-between pt-1 mt-1">
+                <div className={`flex items-center space-x-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${pConfig.color}`}>
                     {pConfig.icon}
                     <span>{priority}</span>
                 </div>
 
-                {needsClarification && (
-                    <div className="flex items-center text-yellow-400 text-xs font-medium gap-1.5 px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/20 animate-pulse">
-                        <AlertTriangle className="h-3 w-3" />
-                        <span>Revisar</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    {progress > 0 && (
+                        <span className="text-[10px] font-medium text-gray-500">{progress}%</span>
+                    )}
+                    {needsClarification && (
+                        <div className="text-yellow-400 animate-pulse">
+                            <AlertTriangle size={14} />
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
