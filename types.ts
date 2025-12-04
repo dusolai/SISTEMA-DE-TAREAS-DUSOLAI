@@ -1,3 +1,9 @@
+export interface Workspace {
+    id: string;
+    name: string;
+    created_at?: string;
+}
+
 export interface Task {
   id: string;
   created_at: string;
@@ -10,6 +16,7 @@ export interface Task {
   progress: number; // 0 a 100
   assigned_to: string | null;
   created_by: string;
+  workspace_id?: string; // <--- NUEVO CAMPO
   audio_url?: string;
   transcription?: string;
   ai_extracted?: AiExtractedData;
@@ -31,13 +38,12 @@ export interface AiExtractedData {
     needs_clarification: boolean;
     clarification_question: string | null;
     confidence_score: number;
-    // Nuevo campo para los pasos sugeridos
     suggested_subtasks: Subtask[];
 }
 
 export const KANBAN_COLUMNS: Array<{id: Task['status'], title: string}> = [
-    { id: 'todo', title: 'Todo' },
-    { id: 'doing', title: 'In Progress' },
-    { id: 'review', title: 'Review' },
-    { id: 'done', title: 'Done' }
+    { id: 'todo', title: 'Por Hacer' },
+    { id: 'doing', title: 'En Progreso' },
+    { id: 'review', title: 'Revisión' },
+    { id: 'done', title: 'Completado' }
 ];
