@@ -1,18 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import KanbanBoard from '../features/kanban/components/KanbanBoard';
 import AudioRecorder from '../features/audio/components/AudioRecorder';
 import TaskModal from '../features/kanban/components/TaskModal';
-import WorkspaceManager from '../features/kanban/components/WorkspaceManager'; // <--- IMPORTANTE
+import WorkspaceManager from '../features/kanban/components/WorkspaceManager';
 import useAuthStore from '../store/authStore';
-import { useUIStore } from '../store/uiStore'; 
-import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces'; // <--- USAR NUEVO HOOK
+import { useUIStore } from '../store/uiStore';
+import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
 import { supabase } from '../services/supabase';
-import { LogOut, Sun, Moon, Briefcase, Settings } from 'lucide-react';
+// IMPORTAMOS LOS NUEVOS ICONOS NECESARIOS
+import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
     const { toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager } = useUIStore();
-    
+
+    // ESTADO PARA CONTROLAR EL MENÚ DESPLEGABLE DE AUDIO
+    const [isAudioDrawerOpen, setIsAudioDrawerOpen] = useState(false);
+
     // Cargamos los workspaces
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
 
@@ -24,25 +28,27 @@ const Dashboard: React.FC = () => {
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+        // IMPORTANTE: Cambiamos 'h-screen' por 'h-full min-h-screen relative' para que el footer fijo funcione bien
+        <div className="flex flex-col h-full min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 relative pb-[40px]"> {/* Añadimos padding bottom igual a la altura de la barra cerrada */}
+            
             {/* Header */}
-            <header className="flex-shrink-0 bg-white dark:bg-gray-900 shadow-md border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 z-20">
+            <header className="flex-shrink-0 bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 z-20 relative">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
-                        
+
                         {/* Logo + Selector + GESTIÓN */}
                         <div className="flex items-center gap-4 sm:gap-6">
                             <h1 className="text-2xl font-bold text-indigo-600 dark:text-indigo-500 tracking-wider hidden sm:block">
                                 DUSOLAI
                             </h1>
-                            
+
                             <div className="flex items-center gap-2">
                                 {/* Selector */}
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                                         <Briefcase size={16} />
                                     </div>
-                                    <select 
+                                    <select
                                         value={currentWorkspaceId || ''}
                                         onChange={(e) => setWorkspace(e.target.value)}
                                         className="pl-10 pr-8 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer appearance-none min-w-[160px] sm:min-w-[180px]"
@@ -63,7 +69,7 @@ const Dashboard: React.FC = () => {
                                 </div>
 
                                 {/* BOTÓN DE GESTIÓN (El Engranaje Mágico) */}
-                                <button 
+                                <button
                                     onClick={openWorkspaceManager}
                                     className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors"
                                     title="Gestionar Negocios"
@@ -78,8 +84,8 @@ const Dashboard: React.FC = () => {
                             <span className="text-gray-600 dark:text-gray-400 text-sm hidden md:block">
                                 {session?.user?.email}
                             </span>
-                            <button 
-                                onClick={toggleTheme} 
+                            <button
+                                onClick={toggleTheme}
                                 className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                             >
                                 <Sun className="h-5 w-5 hidden dark:block" />
@@ -109,13 +115,39 @@ const Dashboard: React.FC = () => {
                     </div>
                 )}
             </main>
-            
-            <TaskModal />
-            <WorkspaceManager /> {/* <--- AQUI SE RENDERIZA EL NUEVO MODAL */}
 
-            {/* Footer */}
-            <footer className="flex-shrink-0 p-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-xl z-10">
-                <AudioRecorder />
+            <TaskModal />
+            <WorkspaceManager />
+
+            {/* --- NUEVO FOOTER DESPLEGABLE --- */}
+            <footer
+                className={`fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out transform ${isAudioDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-40px)]'
+                    }`}
+                style={{ maxHeight: isAudioDrawerOpen ? '400px' : '40px' }} // Altura dinámica
+            >
+                {/* PESTAÑA / BARRA DE ACTIVACIÓN (Siempre visible, 40px de alto) */}
+                <div
+                    onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)}
+                    className="h-[40px] flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                >
+                    <Mic size={16} className="text-indigo-500 mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-2">
+                        {isAudioDrawerOpen ? 'Ocultar Grabadora' : 'Abrir Grabadora IA'}
+                    </span>
+                    {isAudioDrawerOpen ? (
+                        <ChevronDown size={16} className="text-gray-400" />
+                    ) : (
+                        <ChevronUp size={16} className="text-gray-400" />
+                    )}
+                </div>
+
+                {/* CONTENIDO DEL GRABADOR (Se oculta/muestra) */}
+                <div className={`overflow-hidden transition-opacity duration-300 ${isAudioDrawerOpen ? 'opacity-100 visible' : 'opacity-0 invisible h-0'}`}>
+                    {/* Reducimos el padding de p-6 a p-4 para que sea más compacto cuando se abre */}
+                    <div className="p-4 border-t border-gray-100 dark:border-gray-800/50">
+                        <AudioRecorder />
+                    </div>
+                </div>
             </footer>
         </div>
     );
