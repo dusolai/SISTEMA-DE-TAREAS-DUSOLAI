@@ -2,20 +2,21 @@ import React, { useEffect } from 'react';
 import KanbanBoard from '../features/kanban/components/KanbanBoard';
 import AudioRecorder from '../features/audio/components/AudioRecorder';
 import TaskModal from '../features/kanban/components/TaskModal';
+import WorkspaceManager from '../features/kanban/components/WorkspaceManager'; // <--- IMPORTANTE
 import useAuthStore from '../store/authStore';
 import { useUIStore } from '../store/uiStore'; 
-import { useWorkspaces } from '../features/kanban/hooks/useTasks'; // Importamos el hook nuevo
+import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces'; // <--- USAR NUEVO HOOK
 import { supabase } from '../services/supabase';
-import { LogOut, Sun, Moon, Briefcase } from 'lucide-react';
+import { LogOut, Sun, Moon, Briefcase, Settings } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
-    const { toggleTheme, currentWorkspaceId, setWorkspace } = useUIStore();
+    const { toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager } = useUIStore();
     
-    // Cargamos los workspaces desde Supabase
-    const { data: workspaces, isLoading: isLoadingWS } = useWorkspaces();
+    // Cargamos los workspaces
+    const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
 
-    // Efecto: Si no hay workspace seleccionado y ya cargaron, seleccionamos el primero por defecto
+    // Seleccionar el primero por defecto si no hay ninguno
     useEffect(() => {
         if (!currentWorkspaceId && workspaces && workspaces.length > 0) {
             setWorkspace(workspaces[0].id);
@@ -29,35 +30,46 @@ const Dashboard: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         
-                        {/* Logo + Selector de Workspace */}
-                        <div className="flex items-center gap-6">
+                        {/* Logo + Selector + GESTIÓN */}
+                        <div className="flex items-center gap-4 sm:gap-6">
                             <h1 className="text-2xl font-bold text-indigo-600 dark:text-indigo-500 tracking-wider hidden sm:block">
                                 DUSOLAI
                             </h1>
                             
-                            {/* SELECTOR DE NEGOCIO / WORKSPACE */}
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                    <Briefcase size={16} />
+                            <div className="flex items-center gap-2">
+                                {/* Selector */}
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                        <Briefcase size={16} />
+                                    </div>
+                                    <select 
+                                        value={currentWorkspaceId || ''}
+                                        onChange={(e) => setWorkspace(e.target.value)}
+                                        className="pl-10 pr-8 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer appearance-none min-w-[160px] sm:min-w-[180px]"
+                                        disabled={isLoadingWS}
+                                    >
+                                        {isLoadingWS ? (
+                                            <option>Cargando...</option>
+                                        ) : workspaces?.length === 0 ? (
+                                            <option>Sin empresas</option>
+                                        ) : (
+                                            workspaces?.map(ws => (
+                                                <option key={ws.id} value={ws.id}>
+                                                    {ws.name}
+                                                </option>
+                                            ))
+                                        )}
+                                    </select>
                                 </div>
-                                <select 
-                                    value={currentWorkspaceId || ''}
-                                    onChange={(e) => setWorkspace(e.target.value)}
-                                    className="pl-10 pr-8 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer appearance-none min-w-[180px]"
-                                    disabled={isLoadingWS}
+
+                                {/* BOTÓN DE GESTIÓN (El Engranaje Mágico) */}
+                                <button 
+                                    onClick={openWorkspaceManager}
+                                    className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors"
+                                    title="Gestionar Negocios"
                                 >
-                                    {isLoadingWS ? (
-                                        <option>Cargando empresas...</option>
-                                    ) : workspaces?.length === 0 ? (
-                                        <option>Sin empresas</option>
-                                    ) : (
-                                        workspaces?.map(ws => (
-                                            <option key={ws.id} value={ws.id}>
-                                                {ws.name}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
+                                    <Settings size={18} />
+                                </button>
                             </div>
                         </div>
 
@@ -89,16 +101,20 @@ const Dashboard: React.FC = () => {
                 {currentWorkspaceId ? (
                     <KanbanBoard />
                 ) : (
-                    <div className="flex h-full items-center justify-center text-gray-500">
-                        Selecciona un espacio de trabajo para comenzar
+                    <div className="flex flex-col gap-4 h-full items-center justify-center text-gray-500">
+                        <p>No tienes ningún espacio de trabajo seleccionado.</p>
+                        <button onClick={openWorkspaceManager} className="text-indigo-400 hover:underline">
+                            Crear uno nuevo
+                        </button>
                     </div>
                 )}
             </main>
             
             <TaskModal />
+            <WorkspaceManager /> {/* <--- AQUI SE RENDERIZA EL NUEVO MODAL */}
 
-            {/* Footer con Grabadora */}
-            <footer className="flex-shrink-0 p-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-10 transition-colors duration-300">
+            {/* Footer */}
+            <footer className="flex-shrink-0 p-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-xl z-10">
                 <AudioRecorder />
             </footer>
         </div>
