@@ -1,31 +1,62 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../services/supabase';
-import { Task } from '../../../types';
+import { Task, Workspace } from '../../../types';
+import { useUIStore } from '../../../store/uiStore'; // Importamos el store
 import { useEffect } from 'react';
+
+// Hook para gestionar Workspaces (Negocios)
+export const useWorkspaces = () => {
+    return useQuery<Workspace[]>({
+        queryKey: ['workspaces'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('workspaces')
+                .select('*')
+                .order('name', { ascending: true });
+            if (error) throw new Error(error.message);
+            return data || [];
+        }
+    });
+};
 
 const useTasks = () => {
     const queryClient = useQueryClient();
-    const queryKey = ['tasks'];
+    const { currentWorkspaceId } = useUIStore(); // Leemos el workspace actual
+    
+    // La clave de la query ahora incluye el workspace ID para refrescar al cambiar
+    const queryKey = ['tasks', currentWorkspaceId];
 
-    // Fetch tasks
+    // Fetch tasks (FILTRADAS POR WORKSPACE)
     const { data: tasks, isLoading } = useQuery<Task[]>({
         queryKey,
         queryFn: async () => {
+            // Si no hay workspace seleccionado, no cargamos nada
+            if (!currentWorkspaceId) return [];
+
             const { data, error } = await supabase
                 .from('tasks')
                 .select('*')
+                .eq('workspace_id', currentWorkspaceId) // <--- EL FILTRO CLAVE
                 .order('order', { ascending: true });
+            
             if (error) throw new Error(error.message);
             return data || [];
         },
+        enabled: !!currentWorkspaceId, // Solo ejecuta si hay un ID seleccionado
     });
 
     // Real-time subscription
     useEffect(() => {
+        if (!currentWorkspaceId) return;
+
         const channel = supabase
-            .channel('public:tasks')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+            .channel(`public:tasks:ws:${currentWorkspaceId}`)
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'tasks',
+                filter: `workspace_id=eq.${currentWorkspaceId}` // Solo escuchamos cambios de este negocio
+            }, () => {
                 queryClient.invalidateQueries({ queryKey });
             })
             .subscribe();
@@ -33,12 +64,17 @@ const useTasks = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [queryClient]);
+    }, [queryClient, currentWorkspaceId]);
     
-    // Create task
+    // Create task (Asigna automáticamente el workspace actual)
     const createTaskMutation = useMutation({
         mutationFn: async (newTask: Partial<Task>) => {
-            const { data, error } = await supabase.from('tasks').insert([newTask]).select();
+            // Aseguramos que se guarde en el workspace activo
+            const taskWithWorkspace = {
+                ...newTask,
+                workspace_id: currentWorkspaceId
+            };
+            const { data, error } = await supabase.from('tasks').insert([taskWithWorkspace]).select();
             if (error) throw new Error(error.message);
             return data;
         },
@@ -59,10 +95,9 @@ const useTasks = () => {
         },
     });
     
-    // Reorder tasks (placeholder)
+    // Reorder tasks (Sin cambios funcionales, solo mantenemos la estructura)
     const reorderTasksMutation = useMutation({
         mutationFn: async (variables: { taskId: string, newStatus: string, newOrder: number }) => {
-            // This would call the `reorder_tasks` RPC function defined in the SQL schema
             const { error } = await supabase.rpc('reorder_tasks', {
                 p_task_id: variables.taskId,
                 p_new_status: variables.newStatus,
@@ -75,7 +110,6 @@ const useTasks = () => {
             queryClient.invalidateQueries({ queryKey });
         },
     });
-
 
     return { tasks, isLoading, createTaskMutation, updateTaskMutation, reorderTasksMutation };
 };
