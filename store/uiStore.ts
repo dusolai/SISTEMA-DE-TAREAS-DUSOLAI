@@ -12,6 +12,10 @@ interface UIState {
   // Estado del Tema
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+
+  // Estado del Workspace (NUEVO)
+  currentWorkspaceId: string | null;
+  setWorkspace: (id: string) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -23,13 +27,18 @@ export const useUIStore = create<UIState>()(
       openTaskModal: (task) => set({ isTaskModalOpen: true, selectedTask: task }),
       closeTaskModal: () => set({ isTaskModalOpen: false, selectedTask: null }),
 
-      // Tema (Por defecto oscuro)
+      // Tema
       theme: 'dark',
       toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+
+      // Workspace (Por defecto null, obligaremos a seleccionar uno o cargaremos el primero)
+      currentWorkspaceId: null,
+      setWorkspace: (id) => set({ currentWorkspaceId: id }),
     }),
     {
-      name: 'dusolai-ui-storage', // Nombre único para localStorage
-      partialize: (state) => ({ theme: state.theme }), // Solo guardamos el tema, no el estado del modal
+      name: 'dusolai-ui-storage',
+      // Guardamos el tema Y el workspace seleccionado para que no se pierda al recargar
+      partialize: (state) => ({ theme: state.theme, currentWorkspaceId: state.currentWorkspaceId }), 
     }
   )
 );
