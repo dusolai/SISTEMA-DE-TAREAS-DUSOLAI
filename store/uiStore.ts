@@ -3,24 +3,24 @@ import { persist } from 'zustand/middleware';
 import { Task } from '../types';
 
 interface UIState {
-  // Modal Tareas
+  // Estado del Modal
   isTaskModalOpen: boolean;
   selectedTask: Task | null;
-  openTaskModal: (task: Task) => void;
+  openTaskModal: (task?: Task) => void; // <--- Ahora acepta vacío (undefined)
   closeTaskModal: () => void;
 
-  // Modal Workspaces (NUEVO)
-  isWorkspaceManagerOpen: boolean;
-  openWorkspaceManager: () => void;
-  closeWorkspaceManager: () => void;
-
-  // Tema
+  // Estado del Tema
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 
-  // Workspace Activo
+  // Estado del Workspace
   currentWorkspaceId: string | null;
   setWorkspace: (id: string | null) => void;
+  
+  // Estado del Gestor de Workspaces
+  isWorkspaceManagerOpen: boolean;
+  openWorkspaceManager: () => void;
+  closeWorkspaceManager: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -29,10 +29,11 @@ export const useUIStore = create<UIState>()(
       // Modal Tareas
       isTaskModalOpen: false,
       selectedTask: null,
-      openTaskModal: (task) => set({ isTaskModalOpen: true, selectedTask: task }),
+      // Si no pasamos tarea, ponemos selectedTask a null (Modo Creación)
+      openTaskModal: (task) => set({ isTaskModalOpen: true, selectedTask: task || null }),
       closeTaskModal: () => set({ isTaskModalOpen: false, selectedTask: null }),
 
-      // Modal Workspaces (NUEVO)
+      // Gestor de Workspaces
       isWorkspaceManagerOpen: false,
       openWorkspaceManager: () => set({ isWorkspaceManagerOpen: true }),
       closeWorkspaceManager: () => set({ isWorkspaceManagerOpen: false }),
