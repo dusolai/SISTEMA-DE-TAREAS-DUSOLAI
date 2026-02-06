@@ -6,8 +6,9 @@ import WorkspaceManager from '../features/kanban/components/WorkspaceManager';
 import useAuthStore from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
 import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
+import useTasks from '../features/kanban/hooks/useTasks'; // <--- 1. IMPORTAR HOOK DE TAREAS
 import { supabase } from '../services/supabase';
-import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus } from 'lucide-react';
+import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus, Download } from 'lucide-react'; // <--- 2. IMPORTAR ICONO DOWNLOAD
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
@@ -15,12 +16,77 @@ const Dashboard: React.FC = () => {
 
     const [isAudioDrawerOpen, setIsAudioDrawerOpen] = useState(false);
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
+    
+    // 3. OBTENER LAS TAREAS DEL WORKSPACE ACTUAL
+    const { tasks } = useTasks(); 
 
     useEffect(() => {
         if (!currentWorkspaceId && workspaces && workspaces.length > 0) {
             setWorkspace(workspaces[0].id);
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
+
+    // 4. FUNCIÓN PARA GENERAR Y DESCARGAR CSV
+    const handleExportCSV = () => {
+        if (!tasks || tasks.length === 0) {
+            alert("No hay tareas para exportar en este tablero.");
+            return;
+        }
+
+        // Definir las columnas del CSV
+        const headers = [
+            'ID', 
+            'Título', 
+            'Estado', 
+            'Prioridad', 
+            'Progreso', 
+            'Descripción', 
+            'Fecha Creación', 
+            'Subtareas (Total)', 
+            'Subtareas (Completadas)'
+        ];
+
+        // Procesar cada fila
+        const rows = tasks.map(task => {
+            const subtasks = task.ai_extracted?.suggested_subtasks || [];
+            const completedSubtasks = subtasks.filter(s => s.completed).length;
+            
+            // Función auxiliar para escapar comillas dobles y evitar romper el CSV
+            const escape = (text: string | null | undefined) => {
+                if (!text) return '""';
+                return `"${text.toString().replace(/"/g, '""')}"`; // Escapa comillas dobles estilo Excel
+            };
+
+            return [
+                escape(task.id),
+                escape(task.title),
+                escape(task.status),
+                escape(task.priority),
+                `"${task.progress}%"`,
+                escape(task.description),
+                escape(new Date(task.created_at).toLocaleDateString()),
+                subtasks.length,
+                completedSubtasks
+            ].join(',');
+        });
+
+        // Unir cabeceras y filas con saltos de línea
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        
+        // Crear el Blob y el link de descarga
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Nombre del archivo con fecha y nombre del workspace (si existe)
+        const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'tablero';
+        link.setAttribute('download', `tareas_${wsName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 overflow-hidden">
@@ -58,12 +124,22 @@ const Dashboard: React.FC = () => {
                                     </select>
                                 </div>
                                 
+                                {/* BOTÓN EXPORTAR CSV (NUEVO) */}
+                                <button 
+                                    onClick={handleExportCSV} 
+                                    disabled={!currentWorkspaceId || !tasks || tasks.length === 0}
+                                    className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                                    title="Exportar tareas a CSV"
+                                >
+                                    <Download size={18} />
+                                </button>
+
                                 {/* Botón Configuración */}
                                 <button onClick={openWorkspaceManager} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors" title="Gestionar Negocios">
                                     <Settings size={18} />
                                 </button>
 
-                                {/* BOTÓN NUEVA TAREA (El nuevo protagonista) */}
+                                {/* BOTÓN NUEVA TAREA */}
                                 <button 
                                     onClick={() => openTaskModal()} 
                                     disabled={!currentWorkspaceId}
