@@ -10,7 +10,7 @@ if (!apiKey) {
 const ai = new GoogleGenAI({ apiKey });
 const model = 'gemini-2.5-flash';
 
-// --- PROMPTS EXISTENTES ---
+// --- PROMPTS DE AUDIO Y TEXTO (SIN CAMBIOS) ---
 const createPrompt = `You are an expert task management assistant. Extract structured info from Spanish audio.
 Structure:
 {
@@ -27,27 +27,39 @@ Structure:
 }
 Input audio:`;
 
+const subtasksPrompt = `You are a productivity expert. Given a task title and description, generate a checklist of 3 to 6 actionable subtasks to complete it.
+Return ONLY a JSON array of strings. Example: ["Step 1", "Step 2"].
+Task Title: `;
+
 const updatePrompt = `You are updating an EXISTING task based on new audio instructions.
 Current Task JSON:
 `;
 
-// --- NUEVO PROMPT PARA REPORTE EN JSON ---
-const reportPrompt = `Eres un Analista de Proyectos Senior.
-Analiza los datos del proyecto y genera un informe de situación estructurado.
-Devuelve EXCLUSIVAMENTE un objeto JSON válido con este formato (sin markdown, sin bloques de código):
+// --- NUEVO PROMPT: AUDITORÍA DETALLADA ---
+const reportPrompt = `Eres un Auditor de Proyectos Senior.
+Tu trabajo no es solo resumir, sino ANALIZAR CADA TAREA individualmente.
 
+Genera un objeto JSON con este formato EXACTO:
 {
-  "health_score": number, // 0 a 100, donde 100 es éxito total.
-  "executive_summary": "string", // Resumen de 3-4 líneas.
-  "key_risks": ["string", "string"], // Lista de 2-3 riesgos principales.
-  "recommendations": ["string", "string", "string"], // 3 consejos estratégicos.
-  "mood": "Optimista" | "Cauteloso" | "Crítico"
+  "health_score": number, // 0-100
+  "executive_summary": "string", // Resumen global del proyecto
+  "key_risks": ["string", "string"], 
+  "recommendations": ["string", "string", "string"],
+  "mood": "Optimista" | "Cauteloso" | "Crítico",
+  "analyzed_tasks": [
+    {
+      "original_title": "string", // Título exacto de la tarea para identificarla
+      "ai_audit": "string", // TU OPINIÓN PROFESIONAL: ¿Está bien definida? ¿Es un cuello de botella? ¿Es urgente? (Máx 20 palabras)
+      "smart_priority": "string" // Re-evalúa la prioridad real según tu criterio: "Crítica", "Normal", "Baja"
+    }
+  ]
 }
 
-Datos del Proyecto:
+Analiza estas tareas:
 `;
 
-// 1. EXTRAER TAREA (AUDIO)
+// --- FUNCIONES ---
+
 export const extractTaskFromAudio = async (audioBase64: string, mimeType: string): Promise<AiExtractedData> => {
     try {
         const response = await ai.models.generateContent({
@@ -69,7 +81,6 @@ export const extractTaskFromAudio = async (audioBase64: string, mimeType: string
     }
 };
 
-// 2. GENERAR SUBTAREAS (TEXTO)
 export const generateSubtasksFromText = async (title: string, description: string, customInstructions?: string): Promise<Subtask[]> => {
     try {
         let instructions = "Generate a checklist of 3 to 6 actionable subtasks.";
@@ -95,7 +106,6 @@ export const generateSubtasksFromText = async (title: string, description: strin
     }
 };
 
-// 3. ACTUALIZAR TAREA
 export const updateTaskWithAudio = async (currentTask: any, audioBase64: string, mimeType: string): Promise<any> => {
     try {
         const fullPrompt = `${updatePrompt} ${JSON.stringify(currentTask)} \n\n Analyze audio, merge info. Return full JSON.`;
@@ -121,18 +131,20 @@ export const updateTaskWithAudio = async (currentTask: any, audioBase64: string,
     }
 };
 
-// 4. NUEVO: GENERAR DATOS PARA EL INFORME (DEVUELVE JSON)
+// --- FUNCIÓN DEL REPORTE MAESTRO ---
 export const generateProjectReportData = async (tasks: any[], workspaceName: string): Promise<any> => {
     try {
+        // Enviamos datos clave para que la IA pueda juzgar (antigüedad, subtareas completadas, etc.)
         const simplifiedTasks = tasks.map(t => ({
             title: t.title,
+            description: t.description ? t.description.substring(0, 100) : "Sin descripción", // Recortar para ahorrar tokens
             status: t.status,
             priority: t.priority,
-            progress: (t.progress || 0),
-            days_open: Math.floor((new Date().getTime() - new Date(t.created_at).getTime()) / (1000 * 3600 * 24))
+            days_open: Math.floor((new Date().getTime() - new Date(t.created_at).getTime()) / (1000 * 3600 * 24)),
+            subtasks_completed: `${t.ai_extracted?.suggested_subtasks?.filter((s: any) => s.completed).length || 0}/${t.ai_extracted?.suggested_subtasks?.length || 0}`
         }));
 
-        const fullPrompt = `${reportPrompt} \n Nombre del Espacio: "${workspaceName}" \n Tareas: ${JSON.stringify(simplifiedTasks)}`;
+        const fullPrompt = `${reportPrompt} \n Nombre del Proyecto: "${workspaceName}" \n Tareas para auditar: ${JSON.stringify(simplifiedTasks)}`;
 
         const response = await ai.models.generateContent({
             model,
@@ -143,6 +155,13 @@ export const generateProjectReportData = async (tasks: any[], workspaceName: str
         return JSON.parse(response.text.trim());
     } catch (error) {
         console.error("Error generando informe:", error);
-        throw error;
+        return {
+            health_score: 50,
+            executive_summary: "Error al contactar con la IA. Generando reporte básico.",
+            key_risks: ["No disponible"],
+            recommendations: ["Revisar conexión"],
+            mood: "Neutro",
+            analyzed_tasks: [] // Fallback vacío
+        };
     }
 };
