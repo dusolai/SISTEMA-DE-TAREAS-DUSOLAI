@@ -6,19 +6,21 @@ import WorkspaceManager from '../features/kanban/components/WorkspaceManager';
 import useAuthStore from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
 import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
-import useTasks from '../features/kanban/hooks/useTasks'; // <--- 1. IMPORTAR HOOK DE TAREAS
+import useTasks from '../features/kanban/hooks/useTasks';
+import { generateProjectReport } from '../services/geminiService'; // <--- IMPORTAR NUEVA FUNCIÓN
 import { supabase } from '../services/supabase';
-import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus, Download } from 'lucide-react'; // <--- 2. IMPORTAR ICONO DOWNLOAD
+// Importamos iconos nuevos: FileText y Sparkles
+import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus, FileText, Sparkles, Loader2 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
     const { toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager, openTaskModal } = useUIStore();
 
     const [isAudioDrawerOpen, setIsAudioDrawerOpen] = useState(false);
-    const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
+    const [isGeneratingReport, setIsGeneratingReport] = useState(false); // <--- ESTADO DE CARGA PARA EL INFORME
     
-    // 3. OBTENER LAS TAREAS DEL WORKSPACE ACTUAL
-    const { tasks } = useTasks(); 
+    const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
+    const { tasks } = useTasks();
 
     useEffect(() => {
         if (!currentWorkspaceId && workspaces && workspaces.length > 0) {
@@ -26,72 +28,41 @@ const Dashboard: React.FC = () => {
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
-    // 4. FUNCIÓN PARA GENERAR Y DESCARGAR CSV
-    const handleExportCSV = () => {
+    // --- FUNCIÓN INTELIGENTE DE INFORME ---
+    const handleGenerateAIReport = async () => {
         if (!tasks || tasks.length === 0) {
-            alert("No hay tareas para exportar en este tablero.");
+            alert("Necesitas tareas en el tablero para generar un informe.");
             return;
         }
-
-        // Definir las columnas del CSV
-        const headers = [
-            'ID', 
-            'Título', 
-            'Estado', 
-            'Prioridad', 
-            'Progreso', 
-            'Descripción', 
-            'Fecha Creación', 
-            'Subtareas (Total)', 
-            'Subtareas (Completadas)'
-        ];
-
-        // Procesar cada fila
-        const rows = tasks.map(task => {
-            const subtasks = task.ai_extracted?.suggested_subtasks || [];
-            const completedSubtasks = subtasks.filter(s => s.completed).length;
+        
+        setIsGeneratingReport(true);
+        try {
+            const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'Proyecto';
             
-            // Función auxiliar para escapar comillas dobles y evitar romper el CSV
-            const escape = (text: string | null | undefined) => {
-                if (!text) return '""';
-                return `"${text.toString().replace(/"/g, '""')}"`; // Escapa comillas dobles estilo Excel
-            };
+            // 1. Llamamos a Gemini
+            const reportMarkdown = await generateProjectReport(tasks, wsName);
+            
+            // 2. Crear Blob y descargar
+            const blob = new Blob([reportMarkdown], { type: 'text/markdown;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Informe_Maestro_${wsName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.md`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-            return [
-                escape(task.id),
-                escape(task.title),
-                escape(task.status),
-                escape(task.priority),
-                `"${task.progress}%"`,
-                escape(task.description),
-                escape(new Date(task.created_at).toLocaleDateString()),
-                subtasks.length,
-                completedSubtasks
-            ].join(',');
-        });
-
-        // Unir cabeceras y filas con saltos de línea
-        const csvContent = [headers.join(','), ...rows].join('\n');
-        
-        // Crear el Blob y el link de descarga
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        
-        // Nombre del archivo con fecha y nombre del workspace (si existe)
-        const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'tablero';
-        link.setAttribute('download', `tareas_${wsName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        } catch (error) {
+            console.error(error);
+            alert("Error al generar el informe con IA.");
+        } finally {
+            setIsGeneratingReport(false);
+        }
     };
 
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 overflow-hidden">
             
-            {/* Header */}
             <header className="flex-shrink-0 bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 z-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
@@ -100,6 +71,7 @@ const Dashboard: React.FC = () => {
                                 DUSOLAI
                             </h1>
                             <div className="flex items-center gap-2">
+                                {/* Selector de Workspace (Igual que antes) */}
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                                         <Briefcase size={16} />
@@ -124,22 +96,37 @@ const Dashboard: React.FC = () => {
                                     </select>
                                 </div>
                                 
-                                {/* BOTÓN EXPORTAR CSV (NUEVO) */}
+                                {/* --- NUEVO BOTÓN: INFORME MAESTRO IA --- */}
                                 <button 
-                                    onClick={handleExportCSV} 
-                                    disabled={!currentWorkspaceId || !tasks || tasks.length === 0}
-                                    className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                                    title="Exportar tareas a CSV"
+                                    onClick={handleGenerateAIReport} 
+                                    disabled={isGeneratingReport || !currentWorkspaceId || !tasks || tasks.length === 0}
+                                    className={`
+                                        flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all
+                                        ${isGeneratingReport 
+                                            ? 'bg-indigo-50 text-indigo-400 border-indigo-100 cursor-wait' 
+                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-500 hover:text-indigo-500 shadow-sm'
+                                        }
+                                    `}
+                                    title="Generar Informe Maestro con IA"
                                 >
-                                    <Download size={18} />
+                                    {isGeneratingReport ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" />
+                                            <span className="hidden sm:inline">Analizando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles size={16} className="text-yellow-500" />
+                                            <span className="hidden sm:inline">Informe IA</span>
+                                        </>
+                                    )}
                                 </button>
+                                {/* --------------------------------------- */}
 
-                                {/* Botón Configuración */}
                                 <button onClick={openWorkspaceManager} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors" title="Gestionar Negocios">
                                     <Settings size={18} />
                                 </button>
 
-                                {/* BOTÓN NUEVA TAREA */}
                                 <button 
                                     onClick={() => openTaskModal()} 
                                     disabled={!currentWorkspaceId}
@@ -150,6 +137,8 @@ const Dashboard: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+                        
+                        {/* Right Actions (Igual que antes) */}
                         <div className="flex items-center space-x-4">
                             <span className="text-gray-600 dark:text-gray-400 text-sm hidden md:block">
                                 {session?.user?.email}
@@ -184,6 +173,7 @@ const Dashboard: React.FC = () => {
             <TaskModal />
             <WorkspaceManager />
 
+            {/* Footer con Audio Recorder (Igual que antes) */}
             <footer className={`fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out transform ${isAudioDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-40px)]'}`} style={{ maxHeight: isAudioDrawerOpen ? '400px' : '40px' }}>
                 <div onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)} className="h-[40px] flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                     <Mic size={16} className="text-indigo-500 mr-2 group-hover:scale-110 transition-transform" />
