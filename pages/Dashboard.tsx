@@ -7,10 +7,10 @@ import useAuthStore from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
 import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
 import useTasks from '../features/kanban/hooks/useTasks';
-import { generateProjectReportData } from '../services/geminiService'; // Importamos la versión JSON
+import { generateProjectReportData } from '../services/geminiService';
 import { supabase } from '../services/supabase';
-import { jsPDF } from 'jspdf'; // IMPORTANTE: Importamos jsPDF
-import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus, FileText, Loader2 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus, FileText, Loader2, Sparkles } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
@@ -28,7 +28,11 @@ const Dashboard: React.FC = () => {
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
-    // --- GENERADOR DE PDF CON GRÁFICOS ---
+    const safeText = (text: any): string => {
+        if (text === null || text === undefined) return "";
+        return String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC]/g, "").trim(); 
+    };
+
     const handleGeneratePDF = async () => {
         if (!tasks || tasks.length === 0) {
             alert("No hay tareas para analizar.");
@@ -39,10 +43,10 @@ const Dashboard: React.FC = () => {
         try {
             const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'Proyecto';
             
-            // 1. Obtener análisis de IA
+            // 1. OBTENER AUDITORÍA COMPLETA DE GEMINI
             const aiData = await generateProjectReportData(tasks, wsName);
             
-            // 2. Calcular Estadísticas para Gráficos
+            // 2. Datos para gráficos (estos siguen siendo calculados en local para precisión numérica)
             const total = tasks.length;
             const statusCounts = {
                 todo: tasks.filter(t => t.status === 'todo').length,
@@ -51,157 +55,182 @@ const Dashboard: React.FC = () => {
                 review: tasks.filter(t => t.status === 'review').length
             };
 
-            // 3. Crear PDF
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
-            let y = 20; // Cursor vertical
+            let y = 20;
+
+            const checkPageBreak = (spaceNeeded: number) => {
+                if (y + spaceNeeded > 280) {
+                    doc.addPage();
+                    y = 20;
+                    return true;
+                }
+                return false;
+            };
 
             // --- HEADER ---
             doc.setFontSize(22);
-            doc.setTextColor(79, 70, 229); // Indigo
-            doc.text("INFORME DE SITUACIÓN", 20, y);
+            doc.setTextColor(79, 70, 229);
+            doc.text("AUDITORÍA DE PROYECTO CON IA", 20, y);
             
             doc.setFontSize(10);
             doc.setTextColor(100);
-            doc.text(`Generado por Dusolai AI | ${new Date().toLocaleDateString()}`, 20, y + 6);
+            doc.text(`Análisis Inteligente Dusolai | ${new Date().toLocaleDateString()}`, 20, y + 6);
             y += 20;
 
             doc.setDrawColor(200);
             doc.line(20, y, pageWidth - 20, y);
-            y += 10;
+            y += 15;
 
-            // --- SECCIÓN 1: SALUD DEL PROYECTO (GRÁFICO DE BARRA) ---
+            // --- SECCIÓN 1: SALUD ---
             doc.setFontSize(14);
             doc.setTextColor(0);
-            doc.text("1. Salud del Proyecto", 20, y);
+            doc.text("1. Diagnóstico de Salud", 20, y);
             y += 10;
 
-            // Barra de fondo
             doc.setFillColor(240, 240, 240);
             doc.roundedRect(20, y, 170, 10, 3, 3, 'F');
             
-            // Barra de progreso (Color según score)
             const score = aiData.health_score || 50;
-            if (score > 75) doc.setFillColor(34, 197, 94); // Green
-            else if (score > 40) doc.setFillColor(234, 179, 8); // Yellow
-            else doc.setFillColor(239, 68, 68); // Red
+            if (score > 75) doc.setFillColor(34, 197, 94);
+            else if (score > 40) doc.setFillColor(234, 179, 8);
+            else doc.setFillColor(239, 68, 68);
 
             doc.roundedRect(20, y, (170 * score) / 100, 10, 3, 3, 'F');
-            
             doc.setFontSize(10);
             doc.setTextColor(50);
-            doc.text(`${score}/100 - ${aiData.mood || 'Normal'}`, 200, y + 6, { align: 'right' });
+            doc.text(`${score}/100 - ${safeText(aiData.mood || 'Normal')}`, 190, y + 6, { align: 'right' });
             y += 20;
 
-            // --- SECCIÓN 2: DISTRIBUCIÓN DE TAREAS (GRÁFICO DE BARRAS APILADAS) ---
+            // --- SECCIÓN 2: CARGA DE TRABAJO ---
             doc.setFontSize(14);
             doc.setTextColor(0);
-            doc.text("2. Distribución de Carga", 20, y);
+            doc.text("2. Distribución Actual", 20, y);
             y += 10;
-
-            // Calcular anchos
+            // (Gráfico de barras igual que antes, es puramente estadístico)
             const wTodo = (statusCounts.todo / total) * 170;
             const wDoing = (statusCounts.doing / total) * 170;
             const wReview = (statusCounts.review / total) * 170;
             const wDone = (statusCounts.done / total) * 170;
-
             let xBar = 20;
-            
-            // Todo (Gris)
-            if (wTodo > 0) {
-                doc.setFillColor(209, 213, 219);
-                doc.rect(xBar, y, wTodo, 15, 'F');
-                doc.setTextColor(50);
-                if(wTodo > 10) doc.text(`${Math.round((statusCounts.todo/total)*100)}%`, xBar + wTodo/2, y + 9, { align: 'center'});
-                xBar += wTodo;
-            }
-            // Doing (Azul)
-            if (wDoing > 0) {
-                doc.setFillColor(99, 102, 241);
-                doc.rect(xBar, y, wDoing, 15, 'F');
-                doc.setTextColor(255);
-                if(wDoing > 10) doc.text(`${Math.round((statusCounts.doing/total)*100)}%`, xBar + wDoing/2, y + 9, { align: 'center'});
-                xBar += wDoing;
-            }
-            // Review (Amarillo)
-            if (wReview > 0) {
-                doc.setFillColor(245, 158, 11);
-                doc.rect(xBar, y, wReview, 15, 'F');
-                doc.setTextColor(255);
-                if(wReview > 10) doc.text(`${Math.round((statusCounts.review/total)*100)}%`, xBar + wReview/2, y + 9, { align: 'center'});
-                xBar += wReview;
-            }
-            // Done (Verde)
-            if (wDone > 0) {
-                doc.setFillColor(34, 197, 94);
-                doc.rect(xBar, y, wDone, 15, 'F');
-                doc.setTextColor(255);
-                if(wDone > 10) doc.text(`${Math.round((statusCounts.done/total)*100)}%`, xBar + wDone/2, y + 9, { align: 'center'});
-            }
-
-            // Leyenda
+            if (wTodo > 0) { doc.setFillColor(209, 213, 219); doc.rect(xBar, y, wTodo, 15, 'F'); xBar += wTodo; }
+            if (wDoing > 0) { doc.setFillColor(99, 102, 241); doc.rect(xBar, y, wDoing, 15, 'F'); xBar += wDoing; }
+            if (wReview > 0) { doc.setFillColor(245, 158, 11); doc.rect(xBar, y, wReview, 15, 'F'); xBar += wReview; }
+            if (wDone > 0) { doc.setFillColor(34, 197, 94); doc.rect(xBar, y, wDone, 15, 'F'); }
             y += 20;
             doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.setFillColor(209, 213, 219); doc.circle(25, y, 2, 'F'); doc.text("Pendiente", 30, y + 1);
-            doc.setFillColor(99, 102, 241); doc.circle(65, y, 2, 'F'); doc.text("En Curso", 70, y + 1);
-            doc.setFillColor(245, 158, 11); doc.circle(105, y, 2, 'F'); doc.text("Revisión", 110, y + 1);
-            doc.setFillColor(34, 197, 94); doc.circle(145, y, 2, 'F'); doc.text("Completado", 150, y + 1);
-            
+            doc.text(`Pendiente: ${statusCounts.todo} | En Curso: ${statusCounts.doing} | Revisión: ${statusCounts.review} | Hecho: ${statusCounts.done}`, 20, y);
             y += 15;
 
-            // --- SECCIÓN 3: RESUMEN EJECUTIVO (TEXTO IA) ---
+            // --- SECCIÓN 3: ANÁLISIS EJECUTIVO ---
             doc.setFontSize(14);
             doc.setTextColor(0);
-            doc.text("3. Resumen Ejecutivo", 20, y);
+            doc.text("3. Opinión del Auditor (IA)", 20, y);
             y += 8;
             doc.setFontSize(11);
             doc.setTextColor(60);
-            const splitSummary = doc.splitTextToSize(aiData.executive_summary || "Sin resumen disponible.", 170);
+            const splitSummary = doc.splitTextToSize(safeText(aiData.executive_summary), 170);
             doc.text(splitSummary, 20, y);
-            y += (splitSummary.length * 6) + 10;
+            y += (splitSummary.length * 5) + 10;
 
-            // --- SECCIÓN 4: RIESGOS (LISTA) ---
-            if (y > 250) { doc.addPage(); y = 20; } // Nueva página si hace falta
-            
+            // --- SECCIÓN 4: RIESGOS ---
+            checkPageBreak(50);
             doc.setFontSize(14);
-            doc.setTextColor(220, 38, 38); // Rojo
-            doc.text("🚨 Riesgos Detectados", 20, y);
+            doc.setTextColor(220, 38, 38);
+            doc.text("🚨 Riesgos Críticos", 20, y);
             y += 8;
             doc.setFontSize(11);
             doc.setTextColor(60);
             (aiData.key_risks || []).forEach((risk: string) => {
-                doc.text(`• ${risk}`, 25, y);
-                y += 7;
+                checkPageBreak(10);
+                doc.text(`• ${safeText(risk)}`, 25, y);
+                y += 6;
             });
             y += 10;
 
-            // --- SECCIÓN 5: RECOMENDACIONES (CAJA) ---
-            if (y > 230) { doc.addPage(); y = 20; }
-
-            doc.setFillColor(245, 247, 255); // Fondo azul muy claro
+            // --- SECCIÓN 5: RECOMENDACIONES ---
+            checkPageBreak(60);
+            doc.setFillColor(245, 247, 255);
             doc.setDrawColor(200, 210, 255);
-            doc.roundedRect(15, y, 180, 60, 3, 3, 'FD');
+            if (y + 45 > 280) { doc.addPage(); y = 20; }
+            doc.roundedRect(15, y, 180, 50, 3, 3, 'FD');
             
             doc.setFontSize(14);
             doc.setTextColor(79, 70, 229);
-            doc.text("💡 Recomendaciones Estratégicas", 25, y + 10);
-            
+            doc.text("💡 Estrategia Sugerida", 25, y + 10);
             y += 20;
-            doc.setFontSize(11);
+            doc.setFontSize(10);
             doc.setTextColor(50);
             (aiData.recommendations || []).forEach((rec: string) => {
-                const splitRec = doc.splitTextToSize(`• ${rec}`, 160);
+                const splitRec = doc.splitTextToSize(`• ${safeText(rec)}`, 160);
+                if (splitRec.length > 2) splitRec.length = 2; 
                 doc.text(splitRec, 25, y);
-                y += (splitRec.length * 6) + 2;
+                y += (splitRec.length * 5);
+            });
+            y += 15; // Salir del cuadro
+
+            // ============================================================
+            // --- NUEVA SECCIÓN: AUDITORÍA TAREA POR TAREA ---
+            // ============================================================
+            doc.addPage(); 
+            y = 20;
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0);
+            doc.text("📋 Auditoría Detallada de Tareas", 20, y);
+            y += 15;
+
+            // Usamos los datos devueltos por la IA, o hacemos fallback a las tareas locales si la IA no devolvió nada
+            const tasksToPrint = (aiData.analyzed_tasks && aiData.analyzed_tasks.length > 0) 
+                                ? aiData.analyzed_tasks 
+                                : tasks.map(t => ({ original_title: t.title, ai_audit: "Análisis no disponible", smart_priority: t.priority }));
+
+            tasksToPrint.forEach((task: any, index: number) => {
+                checkPageBreak(40);
+
+                // Caja de tarea
+                doc.setDrawColor(230);
+                doc.setFillColor(255, 255, 255);
+                if (index % 2 === 0) doc.setFillColor(250, 250, 252); // Alternar color fondo
+                doc.roundedRect(20, y - 5, 170, 30, 2, 2, 'FD');
+
+                // Título
+                doc.setFontSize(11);
+                doc.setTextColor(0);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${index + 1}. ${safeText(task.original_title)}`, 25, y + 5);
+                
+                // Prioridad Inteligente (Badge)
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "normal");
+                
+                let pColor = [100, 100, 100]; // Gris
+                const pText = safeText(task.smart_priority || 'Normal').toLowerCase();
+                if (pText.includes('crítica') || pText.includes('alta')) pColor = [220, 38, 38]; // Rojo
+                if (pText.includes('baja')) pColor = [34, 197, 94]; // Verde
+
+                doc.setTextColor(pColor[0], pColor[1], pColor[2]);
+                doc.text(`Prioridad IA: ${safeText(task.smart_priority)}`, 140, y + 5);
+
+                // Auditoría IA (El valor clave)
+                doc.setFontSize(10);
+                doc.setTextColor(60);
+                doc.setFont("helvetica", "italic"); // Cursiva para denotar que habla la IA
+                
+                const auditText = `IA: "${safeText(task.ai_audit || "Sin comentarios.")}"`;
+                const splitAudit = doc.splitTextToSize(auditText, 160);
+                
+                doc.text(splitAudit, 25, y + 14);
+
+                y += 35; // Espacio fijo por bloque
             });
 
-            // DESCARGAR
-            doc.save(`Informe_Grafico_${wsName.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`Auditoria_IA_${wsName.replace(/\s+/g, '_')}.pdf`);
 
         } catch (error) {
-            console.error(error);
-            alert("Error al generar el PDF.");
+            console.error("Error PDF:", error);
+            alert("Hubo un error al generar la auditoría.");
         } finally {
             setIsGeneratingReport(false);
         }
@@ -241,28 +270,28 @@ const Dashboard: React.FC = () => {
                                     </select>
                                 </div>
                                 
-                                {/* BOTÓN PDF CON GRÁFICOS */}
+                                {/* BOTÓN DE AUDITORÍA IA */}
                                 <button 
                                     onClick={handleGeneratePDF} 
                                     disabled={isGeneratingReport || !currentWorkspaceId || !tasks || tasks.length === 0}
                                     className={`
                                         flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all
                                         ${isGeneratingReport 
-                                            ? 'bg-red-50 text-red-400 border-red-100 cursor-wait' 
-                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-red-500 hover:text-red-500 shadow-sm'
+                                            ? 'bg-purple-50 text-purple-500 border-purple-100 cursor-wait' 
+                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:text-purple-500 shadow-sm'
                                         }
                                     `}
-                                    title="Descargar Informe PDF con Gráficos"
+                                    title="Analizar y Auditar con IA"
                                 >
                                     {isGeneratingReport ? (
                                         <>
                                             <Loader2 size={16} className="animate-spin" />
-                                            <span className="hidden sm:inline">Generando PDF...</span>
+                                            <span className="hidden sm:inline">Auditando...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <FileText size={16} className="text-red-500" />
-                                            <span className="hidden sm:inline">Informe PDF</span>
+                                            <Sparkles size={16} className="text-purple-500" />
+                                            <span className="hidden sm:inline">Auditoría IA</span>
                                         </>
                                     )}
                                 </button>
