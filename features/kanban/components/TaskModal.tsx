@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, GitCommit, FileText, Activity, Plus } from 'lucide-react';
+import { X, Calendar, GitCommit, FileText, Activity, Plus } from 'lucide-react';
 import { useUIStore } from '../../../store/uiStore';
 import useTasks from '../hooks/useTasks';
 import { Task } from '../../../types';
 
 const TaskModal: React.FC = () => {
-    // Usamos 'selectedTask' para leer los datos
+    // Usamos 'selectedTask' para leer los datos correctamente
     const { isTaskModalOpen, selectedTask, closeTaskModal } = useUIStore();
     const { createTask, updateTask } = useTasks();
     const currentWorkspaceId = useUIStore((state) => state.currentWorkspaceId);

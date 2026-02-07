@@ -6,13 +6,13 @@ interface UIState {
     isWorkspaceManagerOpen: boolean;
     isTaskModalOpen: boolean;
     currentWorkspaceId: string | null;
-    selectedTask: Task | null; // Aquí guardamos la tarea activa
+    selectedTask: Task | null; // Usamos este nombre consistentemente
 
     toggleTheme: () => void;
     openWorkspaceManager: () => void;
     closeWorkspaceManager: () => void;
     
-    openTaskModal: (task?: Task) => void; // Acepta tarea opcional
+    openTaskModal: (task?: Task) => void;
     closeTaskModal: () => void;
     
     setWorkspace: (id: string) => void;
@@ -36,7 +36,7 @@ export const useUIStore = create<UIState>((set) => ({
 
     openTaskModal: (task) => set({ 
         isTaskModalOpen: true, 
-        selectedTask: task || null 
+        selectedTask: task || null // Guardamos la tarea aquí
     }),
     
     closeTaskModal: () => set({ 

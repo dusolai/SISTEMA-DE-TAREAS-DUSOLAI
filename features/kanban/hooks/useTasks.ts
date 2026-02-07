@@ -6,7 +6,7 @@ import useAuthStore from '../../../store/authStore';
 interface TasksState {
     tasks: Task[];
     isLoading: boolean;
-    // IMPORTANTE: Esta función es la que faltaba y causaba el error
+    // ESTA ES LA FUNCIÓN QUE FALTABA Y ROMPÍA LA PANTALLA
     fetchTasks: (workspaceId: string) => Promise<void>;
     createTask: (task: Omit<Task, 'id' | 'created_at' | 'history' | 'updated_at'>) => Promise<void>;
     updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
@@ -28,15 +28,20 @@ const useTasks = create<TasksState>((set, get) => ({
 
     fetchTasks: async (workspaceId) => {
         set({ isLoading: true });
-        // Asegúrate de que tu columna en Supabase sea 'order' o 'order_index'
+        // Intentamos ordenar por 'order'. Si tu base de datos usa 'order_index', esto podría no ordenar bien pero no romperá la app si la columna existe.
         const { data, error } = await supabase
             .from('tasks')
             .select('*')
             .eq('workspace_id', workspaceId)
-            .order('order', { ascending: true }); // Si falla, cambia 'order' por 'order_index'
+            .order('order', { ascending: true });
 
-        if (error) console.error('Error fetching tasks:', error);
-        else set({ tasks: data || [] });
+        if (error) {
+            console.error('Error fetching tasks:', error);
+            // Si falla, al menos dejamos el array vacío para que no explote
+            set({ tasks: [] }); 
+        } else {
+            set({ tasks: data || [] });
+        }
         set({ isLoading: false });
     },
 
@@ -63,6 +68,7 @@ const useTasks = create<TasksState>((set, get) => ({
         };
 
         const { data, error } = await supabase.from('tasks').insert([taskToInsert]).select().single();
+        
         if (error) console.error('Error creating task:', error);
         else set((state) => ({ tasks: [...state.tasks, data] }));
     },
@@ -74,8 +80,8 @@ const useTasks = create<TasksState>((set, get) => ({
         
         if (!oldTask) return;
 
-        // Evitar llenar historial con cambios de orden (drag & drop)
         let updatedHistory = oldTask.history || [];
+        // Solo añadimos historial si no es un movimiento de arrastrar (order)
         if (!updates.order && !updates.progress) {
              const newEvent: HistoryEvent = {
                 id: crypto.randomUUID(),
@@ -89,12 +95,13 @@ const useTasks = create<TasksState>((set, get) => ({
 
         const finalUpdates = { ...updates, history: updatedHistory, updated_at: new Date().toISOString() };
 
+        // Actualización optimista (se ve al instante)
         set((state) => ({ tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...finalUpdates } : t)) }));
 
         const { error } = await supabase.from('tasks').update(finalUpdates).eq('id', id);
         if (error) {
             console.error('Error updating task:', error);
-            set({ tasks: currentTasks }); // Rollback
+            set({ tasks: currentTasks }); // Si falla, volvemos atrás
         }
     },
 

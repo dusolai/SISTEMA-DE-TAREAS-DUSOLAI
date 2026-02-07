@@ -19,21 +19,23 @@ const Dashboard: React.FC = () => {
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
-    // AQUÍ ESTABA EL ERROR: Necesitamos fetchTasks
+    // AHORA SÍ: Importamos fetchTasks
     const { tasks, fetchTasks } = useTasks();
 
+    // Sincronizar tema oscuro/claro
     useEffect(() => {
         if (theme === 'dark') document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
     }, [theme]);
 
+    // Seleccionar workspace por defecto
     useEffect(() => {
         if (!currentWorkspaceId && workspaces && workspaces.length > 0) {
             setWorkspace(workspaces[0].id);
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
-    // AQUÍ LLAMAMOS A LOS DATOS
+    // CARGAR TAREAS (Esto arregla la pantalla blanca)
     useEffect(() => {
         if (currentWorkspaceId) {
             fetchTasks(currentWorkspaceId);
@@ -51,9 +53,7 @@ const Dashboard: React.FC = () => {
         try {
             const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'Proyecto';
             const aiData = await generateProjectReportData(tasks, wsName);
-            
             const doc = new jsPDF();
-            const pageWidth = doc.internal.pageSize.getWidth();
             let y = 20;
 
             const checkPageBreak = (spaceNeeded: number) => {
@@ -74,12 +74,15 @@ const Dashboard: React.FC = () => {
             const tasksToPrint = aiData.analyzed_tasks || tasks.map(t => ({ original_title: t.title, ai_audit: "Sin datos", smart_priority: t.priority }));
             
             tasksToPrint.forEach((task: any, i: number) => {
+                const originalTask = tasks.find(t => t.title === task.original_title);
+                const createdDate = originalTask ? new Date(originalTask.created_at).toLocaleDateString() : "-";
+
                 checkPageBreak(30);
                 doc.setFontSize(11); doc.setTextColor(0);
                 doc.text(`${i+1}. ${cleanText(task.original_title)}`, 20, y);
                 y += 6;
                 doc.setFontSize(9); doc.setTextColor(100);
-                doc.text(`IA: ${cleanText(task.ai_audit)}`, 25, y);
+                doc.text(`Creado: ${createdDate} | IA: ${cleanText(task.ai_audit)}`, 25, y);
                 y += 10;
             });
 
