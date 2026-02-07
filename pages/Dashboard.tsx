@@ -19,15 +19,23 @@ const Dashboard: React.FC = () => {
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
-    const { tasks } = useTasks();
+    // CORRECCIÓN: Extraemos fetchTasks para poder llamar a los datos
+    const { tasks, fetchTasks } = useTasks();
 
+    // Efecto 1: Seleccionar workspace por defecto si no hay uno
     useEffect(() => {
         if (!currentWorkspaceId && workspaces && workspaces.length > 0) {
             setWorkspace(workspaces[0].id);
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
-    // Limpiador seguro de texto para PDF
+    // CORRECCIÓN CRÍTICA: Efecto 2: Cargar tareas cuando cambia el workspace
+    useEffect(() => {
+        if (currentWorkspaceId) {
+            fetchTasks(currentWorkspaceId);
+        }
+    }, [currentWorkspaceId, fetchTasks]);
+
     const cleanText = (text: any): string => {
         if (!text) return "";
         return String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC\n\r]/g, "").trim(); 
