@@ -6,15 +6,13 @@ interface UIState {
     isWorkspaceManagerOpen: boolean;
     isTaskModalOpen: boolean;
     currentWorkspaceId: string | null;
-    selectedTask: Task | null; // Usamos este nombre consistentemente
+    taskModalData: Task | null; // <--- RESTAURADO: Nombre original
 
     toggleTheme: () => void;
     openWorkspaceManager: () => void;
     closeWorkspaceManager: () => void;
-    
     openTaskModal: (task?: Task) => void;
     closeTaskModal: () => void;
-    
     setWorkspace: (id: string) => void;
 }
 
@@ -23,7 +21,7 @@ export const useUIStore = create<UIState>((set) => ({
     isWorkspaceManagerOpen: false,
     isTaskModalOpen: false,
     currentWorkspaceId: null,
-    selectedTask: null,
+    taskModalData: null,
 
     toggleTheme: () => set((state) => {
         const newTheme = state.theme === 'light' ? 'dark' : 'light';
@@ -36,12 +34,12 @@ export const useUIStore = create<UIState>((set) => ({
 
     openTaskModal: (task) => set({ 
         isTaskModalOpen: true, 
-        selectedTask: task || null // Guardamos la tarea aquí
+        taskModalData: task || null 
     }),
     
     closeTaskModal: () => set({ 
         isTaskModalOpen: false, 
-        selectedTask: null 
+        taskModalData: null 
     }),
 
     setWorkspace: (id) => set({ currentWorkspaceId: id }),

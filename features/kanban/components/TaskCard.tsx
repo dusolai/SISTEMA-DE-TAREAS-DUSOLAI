@@ -9,18 +9,14 @@ interface Props {
 }
 
 const TaskCard: React.FC<Props> = ({ task }) => {
-    // Importamos la acción del store
-    const { openTaskModal } = useUIStore();
+    const { openTaskModal } = useUIStore(); 
 
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
-        data: { task }
+        data: { task } 
     });
 
-    // Estilo para el movimiento suave
-    const style = transform ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    } : undefined;
+    const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
 
     const priorityColors = {
         low: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
@@ -32,15 +28,14 @@ const TaskCard: React.FC<Props> = ({ task }) => {
         <div
             ref={setNodeRef}
             style={style}
-            // CLAVE: Al hacer click, pasamos la tarea entera al modal
-            onClick={() => openTaskModal(task)}
+            // ESTO ABRE EL MODAL CORRECTAMENTE
+            onClick={() => openTaskModal(task)} 
             className={`
                 group relative bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 
-                hover:shadow-md transition-all duration-200 cursor-pointer select-none
+                hover:shadow-md transition-all duration-200 cursor-pointer 
                 ${isDragging ? 'opacity-50 rotate-2 scale-105 z-50' : 'opacity-100'}
             `}
         >
-            {/* Botón de arrastre */}
             <button 
                 {...listeners} 
                 {...attributes}
@@ -66,24 +61,10 @@ const TaskCard: React.FC<Props> = ({ task }) => {
                 </span>
 
                 <div className="flex items-center gap-2 text-gray-400">
-                    {/* Subtareas */}
-                    {task.ai_extracted?.suggested_subtasks?.length ? (
-                        <div className="flex items-center gap-1 text-xs">
-                            <CheckCircle2 size={12} />
-                            <span>
-                                {task.ai_extracted.suggested_subtasks.filter(s => s.completed).length}/
-                                {task.ai_extracted.suggested_subtasks.length}
-                            </span>
-                        </div>
-                    ) : null}
-
-                    {/* Fecha */}
-                    <div className="flex items-center gap-1 text-xs">
-                        <Clock size={12} />
-                        <span>
-                            {new Date(task.created_at).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
-                        </span>
-                    </div>
+                    <Clock size={12} />
+                    <span className="text-xs">
+                        {new Date(task.created_at).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+                    </span>
                 </div>
             </div>
         </div>
