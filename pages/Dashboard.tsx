@@ -27,8 +27,7 @@ const Dashboard: React.FC = () => {
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
-    // Limpiador agresivo de texto: Solo permite ASCII básico y saltos de línea
-    // Esto ELIMINA emojis y símbolos raros que rompen el PDF
+    // Limpiador seguro de texto para PDF
     const cleanText = (text: any): string => {
         if (!text) return "";
         return String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC\n\r]/g, "").trim(); 
@@ -67,7 +66,7 @@ const Dashboard: React.FC = () => {
                 return false;
             };
 
-            // === HEADER SIN EMOJIS ===
+            // HEADER
             doc.setFontSize(20);
             doc.setTextColor(50, 50, 50);
             doc.setFont("helvetica", "bold");
@@ -82,7 +81,7 @@ const Dashboard: React.FC = () => {
             doc.line(20, y, pageWidth - 20, y);
             y += 15;
 
-            // === 1. SALUD ===
+            // 1. SALUD
             doc.setFontSize(14);
             doc.setTextColor(0);
             doc.text("1. SALUD DEL PROYECTO", 20, y);
@@ -94,22 +93,26 @@ const Dashboard: React.FC = () => {
             else if (score > 40) doc.setFillColor(234, 179, 8);
             else doc.setFillColor(239, 68, 68);
             doc.rect(20, y, (170 * score) / 100, 8, 'F');
+            
             doc.setFontSize(10);
             doc.setTextColor(50);
             doc.text(`Puntuacion: ${score}/100`, 190, y + 6, { align: 'right' });
             y += 20;
 
-            // === 2. ESTADISTICAS ===
+            // 2. ESTADISTICAS
             doc.setFontSize(14);
             doc.setTextColor(0);
             doc.text("2. ESTADISTICAS", 20, y);
             y += 10;
             doc.setFontSize(10);
             doc.setTextColor(80);
-            doc.text(`Pendientes: ${statusCounts.todo}  |  En Curso: ${statusCounts.doing}  |  Revision: ${statusCounts.review}  |  Completadas: ${statusCounts.done}`, 20, y);
+            doc.text(`Pendientes: ${statusCounts.todo}`, 20, y);
+            doc.text(`En Curso: ${statusCounts.doing}`, 70, y);
+            doc.text(`Revision: ${statusCounts.review}`, 120, y);
+            doc.text(`Completadas: ${statusCounts.done}`, 170, y);
             y += 15;
 
-            // === 3. RESUMEN ===
+            // 3. RESUMEN
             doc.setFontSize(14);
             doc.setTextColor(0);
             doc.text("3. RESUMEN EJECUTIVO", 20, y);
@@ -120,7 +123,7 @@ const Dashboard: React.FC = () => {
             doc.text(summaryLines, 20, y);
             y += (summaryLines.length * 5) + 10;
 
-            // === 4. RIESGOS ===
+            // 4. RIESGOS
             checkPageBreak(40);
             doc.setFontSize(14);
             doc.setTextColor(200, 0, 0);
@@ -136,7 +139,7 @@ const Dashboard: React.FC = () => {
             });
             y += 10;
 
-            // === 5. RECOMENDACIONES ===
+            // 5. RECOMENDACIONES
             checkPageBreak(50);
             doc.setFontSize(14);
             doc.setTextColor(0, 0, 200);
@@ -150,7 +153,7 @@ const Dashboard: React.FC = () => {
             });
             y += 15;
 
-            // === 6. AUDITORIA DETALLADA ===
+            // 6. AUDITORIA
             doc.addPage();
             y = 20;
             doc.setFontSize(16);
@@ -182,7 +185,6 @@ const Dashboard: React.FC = () => {
                 doc.rect(20, y, 170, boxHeight, 'FD');
 
                 let cy = y + 6;
-                
                 doc.setTextColor(0);
                 doc.setFont("helvetica", "bold");
                 doc.text(titleLines, 25, cy);
@@ -191,7 +193,7 @@ const Dashboard: React.FC = () => {
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(9);
                 doc.setTextColor(100);
-                doc.text(`Creado: ${createdDate} | Prioridad Sugerida: ${cleanText(task.smart_priority)}`, 25, cy);
+                doc.text(`Creado: ${createdDate} | Prioridad IA: ${cleanText(task.smart_priority)}`, 25, cy);
                 cy += 6;
 
                 doc.setFontSize(10);
