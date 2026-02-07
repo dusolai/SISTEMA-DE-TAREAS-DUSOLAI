@@ -14,22 +14,30 @@ import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Pl
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
-    const { toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager, openTaskModal } = useUIStore();
+    // CORRECCIÓN 1: Traemos 'theme' del store para sincronizarlo
+    const { theme, toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager, openTaskModal } = useUIStore();
+    
     const [isAudioDrawerOpen, setIsAudioDrawerOpen] = useState(false);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
-    // CORRECCIÓN: Extraemos fetchTasks para poder llamar a los datos
     const { tasks, fetchTasks } = useTasks();
 
-    // Efecto 1: Seleccionar workspace por defecto si no hay uno
+    // CORRECCIÓN 2: Sincronizar el tema (Oscuro/Claro) al cargar la página
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [theme]);
+
     useEffect(() => {
         if (!currentWorkspaceId && workspaces && workspaces.length > 0) {
             setWorkspace(workspaces[0].id);
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
-    // CORRECCIÓN CRÍTICA: Efecto 2: Cargar tareas cuando cambia el workspace
     useEffect(() => {
         if (currentWorkspaceId) {
             fetchTasks(currentWorkspaceId);
@@ -222,7 +230,9 @@ const Dashboard: React.FC = () => {
     };
 
     return (
+        // CORRECCIÓN 3: Fondo sólido (sin /50) para mejor contraste en modo oscuro
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 overflow-hidden">
+            
             <header className="flex-shrink-0 bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 z-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
@@ -258,17 +268,21 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex items-center space-x-4">
                             <span className="text-gray-600 dark:text-gray-400 text-sm hidden md:block">{session?.user?.email}</span>
-                            <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100"><Sun className="h-5 w-5 hidden dark:block" /><Moon className="h-5 w-5 dark:hidden" /></button>
+                            <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><Sun className="h-5 w-5 hidden dark:block" /><Moon className="h-5 w-5 dark:hidden" /></button>
                             <button onClick={() => supabase.auth.signOut()} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:text-red-500"><LogOut className="h-5 w-5" /></button>
                         </div>
                     </div>
                 </div>
             </header>
-            <main className="flex-1 overflow-hidden p-4 md:p-6 bg-gray-50 dark:bg-gray-950/50 transition-colors duration-300 pb-[50px]">
-                {currentWorkspaceId ? <div className="h-full w-full"><KanbanBoard /></div> : <div className="flex items-center justify-center h-full text-gray-500">Selecciona un espacio de trabajo</div>}
+
+            {/* CORRECCIÓN 4: Fondo del tablero sin transparencias para evitar efecto "lavado" */}
+            <main className="flex-1 overflow-hidden p-4 md:p-6 bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pb-[50px]">
+                {currentWorkspaceId ? <div className="h-full w-full"><KanbanBoard /></div> : <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Selecciona un espacio de trabajo</div>}
             </main>
+            
             <TaskModal />
             <WorkspaceManager />
+
             <footer className={`fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg transition-all duration-300 ease-in-out transform ${isAudioDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-40px)]'}`} style={{ maxHeight: isAudioDrawerOpen ? '400px' : '40px' }}>
                 <div onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)} className="h-[40px] flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                     <Mic size={16} className="text-indigo-500 mr-2 group-hover:scale-110 transition-transform" />
