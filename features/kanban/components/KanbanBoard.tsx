@@ -1,58 +1,87 @@
-
 import React from 'react';
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import useTasks from '../hooks/useTasks';
 import Column from './Column';
-import { KANBAN_COLUMNS } from '../../../types';
+import TaskCard from './TaskCard'; // Asegúrate de importar TaskCard para el Overlay si lo usas
+import { KANBAN_COLUMNS, Task } from '../../../types';
 
 const KanbanBoard: React.FC = () => {
-    const { tasks, updateTaskMutation, reorderTasksMutation } = useTasks();
+    // CORRECCIÓN: Usamos 'updateTask' directamente, no 'updateTaskMutation'
+    const { tasks, updateTask } = useTasks();
+    const [activeTask, setActiveTask] = React.useState<Task | null>(null);
 
-    const handleDragEnd = (event: DragEndEvent) => {
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5, // Evita clicks accidentales
+            },
+        })
+    );
+
+    const handleDragStart = (event: any) => {
+        const task = tasks.find(t => t.id === event.active.id);
+        if (task) setActiveTask(task);
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
+        setActiveTask(null);
 
         if (!over) return;
 
-        const activeTask = tasks?.find(t => t.id === active.id);
-        if (!activeTask) return;
-
+        const taskId = active.id as string;
         const overId = over.id.toString();
+        
+        const currentTask = tasks.find(t => t.id === taskId);
+        if (!currentTask) return;
 
-        if (KANBAN_COLUMNS.some(c => c.id === overId) && activeTask.status !== overId) {
-            // Task dropped on a different column
-            updateTaskMutation.mutate({ id: active.id as string, updates: { status: overId as any } });
-        } else {
-            // Task dropped on another task (reordering)
-            const overTask = tasks?.find(t => t.id === overId);
-            if(overTask && activeTask.id !== overTask.id) {
-                // Simplified reordering logic. For a full implementation, you'd calculate the new order.
-                // This example just moves it to the target status.
-                 if (activeTask.status !== overTask.status) {
-                    updateTaskMutation.mutate({ id: active.id as string, updates: { status: overTask.status } });
-                 }
+        // Caso 1: Soltar sobre una columna (cambio de estado)
+        if (KANBAN_COLUMNS.some(col => col.id === overId)) {
+            if (currentTask.status !== overId) {
+                // Actualizamos el estado usando la función nueva
+                await updateTask(taskId, { status: overId as any });
             }
+        } 
+        // Caso 2: Soltar sobre otra tarea (reordenar o cambiar columna)
+        else {
+            const overTask = tasks.find(t => t.id === overId);
+            if (overTask && currentTask.status !== overTask.status) {
+                // Si cambiamos de columna arrastrando sobre una tarea
+                await updateTask(taskId, { status: overTask.status });
+            }
+            // Aquí podrías añadir lógica de reordenamiento (order) si lo necesitas
         }
     };
-    
-    if (!tasks) {
-        return <div className="text-center p-10">Loading tasks...</div>
-    }
 
     return (
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-full">
+        <DndContext 
+            sensors={sensors} 
+            collisionDetection={closestCenter} 
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="flex h-full gap-6 overflow-x-auto pb-4 items-start">
                 <SortableContext items={KANBAN_COLUMNS.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-                    {KANBAN_COLUMNS.map(column => (
-                        <Column
-                            key={column.id}
-                            id={column.id}
-                            title={column.title}
-                            tasks={tasks?.filter(task => task.status === column.id) || []}
+                    {KANBAN_COLUMNS.map((column) => (
+                        <Column 
+                            key={column.id} 
+                            id={column.id} 
+                            title={column.title} 
+                            tasks={tasks.filter(t => t.status === column.id)} 
                         />
                     ))}
                 </SortableContext>
             </div>
+
+            {/* Overlay para ver la tarjeta mientras se arrastra */}
+            <DragOverlay>
+                {activeTask ? (
+                    <div className="opacity-80 rotate-2 scale-105">
+                        <TaskCard task={activeTask} />
+                    </div>
+                ) : null}
+            </DragOverlay>
         </DndContext>
     );
 };
