@@ -10,7 +10,7 @@ import useTasks from '../features/kanban/hooks/useTasks';
 import { generateProjectReportData } from '../services/geminiService';
 import { supabase } from '../services/supabase';
 import { jsPDF } from 'jspdf';
-import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus, FileText, Loader2, Sparkles } from 'lucide-react';
+import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Plus, Loader2, Sparkles } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
@@ -29,9 +29,10 @@ const Dashboard: React.FC = () => {
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
     // --- FUNCIÓN SEGURA DE TEXTO ---
-    // Elimina caracteres que rompen el PDF pero mantiene acentos españoles
+    // Limpia caracteres que rompen el PDF (emojis, símbolos raros) pero mantiene acentos
     const safeText = (text: any): string => {
         if (text === null || text === undefined) return "";
+        // Mantiene ASCII, Latin-1 (acentos) y saltos de línea. Elimina todo lo demás.
         return String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC\n\r]/g, "").trim(); 
     };
 
@@ -48,7 +49,7 @@ const Dashboard: React.FC = () => {
             // 1. OBTENER DATOS DE IA
             const aiData = await generateProjectReportData(tasks, wsName);
             
-            // 2. DATOS ESTADÍSTICOS LOCALES
+            // 2. DATOS ESTADÍSTICOS
             const total = tasks.length;
             const statusCounts = {
                 todo: tasks.filter(t => t.status === 'todo').length,
@@ -72,11 +73,13 @@ const Dashboard: React.FC = () => {
             };
 
             // --- HEADER ---
-            doc.setFontSize(22);
-            doc.setTextColor(79, 70, 229);
+            doc.setFontSize(20);
+            doc.setTextColor(79, 70, 229); // Indigo
+            doc.setFont("helvetica", "bold");
             doc.text("AUDITORÍA DE PROYECTO CON IA", 20, y);
             
             doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
             doc.setTextColor(100);
             doc.text(`Generado por Dusolai | ${new Date().toLocaleDateString()}`, 20, y + 6);
             y += 20;
@@ -85,31 +88,35 @@ const Dashboard: React.FC = () => {
             doc.line(20, y, pageWidth - 20, y);
             y += 15;
 
-            // --- 1. DIAGNÓSTICO ---
+            // --- 1. DIAGNÓSTICO (Icono: Barra de Color) ---
             doc.setFontSize(14);
             doc.setTextColor(0);
             doc.text("1. Diagnóstico de Salud", 20, y);
             y += 10;
 
+            // Fondo barra
             doc.setFillColor(240, 240, 240);
             doc.roundedRect(20, y, 170, 10, 3, 3, 'F');
             
+            // Barra progreso
             const score = aiData.health_score || 50;
-            if (score > 75) doc.setFillColor(34, 197, 94);
-            else if (score > 40) doc.setFillColor(234, 179, 8);
-            else doc.setFillColor(239, 68, 68);
+            if (score > 75) doc.setFillColor(34, 197, 94); // Verde
+            else if (score > 40) doc.setFillColor(234, 179, 8); // Amarillo
+            else doc.setFillColor(239, 68, 68); // Rojo
 
             doc.roundedRect(20, y, (170 * score) / 100, 10, 3, 3, 'F');
             doc.setFontSize(10);
             doc.setTextColor(50);
             doc.text(`${score}/100 - ${safeText(aiData.mood || 'Normal')}`, 190, y + 6, { align: 'right' });
-            y += 20;
+            y += 25;
 
             // --- 2. DISTRIBUCIÓN ---
             doc.setFontSize(14);
             doc.setTextColor(0);
-            doc.text("2. Distribución Actual", 20, y);
+            doc.text("2. Distribución de Carga", 20, y);
             y += 10;
+            
+            // Gráfico Barras
             const wTodo = (statusCounts.todo / total) * 170;
             const wDoing = (statusCounts.doing / total) * 170;
             const wReview = (statusCounts.review / total) * 170;
@@ -120,59 +127,74 @@ const Dashboard: React.FC = () => {
             if (wReview > 0) { doc.setFillColor(245, 158, 11); doc.rect(xBar, y, wReview, 15, 'F'); xBar += wReview; }
             if (wDone > 0) { doc.setFillColor(34, 197, 94); doc.rect(xBar, y, wDone, 15, 'F'); }
             y += 20;
+            
             doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.text(`Pendiente: ${statusCounts.todo} | En Curso: ${statusCounts.doing} | Revisión: ${statusCounts.review} | Hecho: ${statusCounts.done}`, 20, y);
-            y += 15;
+            doc.text(`Pendiente: ${statusCounts.todo}  |  En Curso: ${statusCounts.doing}  |  Revisión: ${statusCounts.review}  |  Hecho: ${statusCounts.done}`, 20, y);
+            y += 20;
 
-            // --- 3. RESUMEN EJECUTIVO (Multilínea seguro) ---
-            doc.setFontSize(14);
+            // --- 3. OPINIÓN IA (Icono: Cuadrado Azul) ---
+            doc.setFillColor(59, 130, 246); // Azul
+            doc.rect(20, y - 4, 4, 4, 'F'); 
+            
+            doc.setFontSize(13);
             doc.setTextColor(0);
-            doc.text("3. Opinión del Auditor (IA)", 20, y);
+            doc.text("OPINIÓN DEL AUDITOR", 28, y);
             y += 8;
-            doc.setFontSize(11);
+            
+            doc.setFontSize(10);
             doc.setTextColor(60);
             const splitSummary = doc.splitTextToSize(safeText(aiData.executive_summary), 170);
             doc.text(splitSummary, 20, y);
-            y += (splitSummary.length * 5) + 10;
+            y += (splitSummary.length * 5) + 15;
 
-            // --- 4. RIESGOS ---
+            // --- 4. RIESGOS (Icono: Cuadrado Rojo) ---
             checkPageBreak(50);
-            doc.setFontSize(14);
+            
+            doc.setFillColor(220, 38, 38); // Rojo
+            doc.rect(20, y - 4, 4, 4, 'F');
+            
+            doc.setFontSize(13);
             doc.setTextColor(220, 38, 38);
-            doc.text("🚨 Riesgos Críticos", 20, y);
+            doc.text("RIESGOS CRÍTICOS", 28, y);
             y += 8;
-            doc.setFontSize(11);
+            
+            doc.setFontSize(10);
             doc.setTextColor(60);
             (aiData.key_risks || []).forEach((risk: string) => {
-                const splitRisk = doc.splitTextToSize(`• ${safeText(risk)}`, 170);
-                checkPageBreak(splitRisk.length * 6);
-                doc.text(splitRisk, 25, y);
-                y += (splitRisk.length * 6) + 2;
+                // Usamos guion '-' en lugar de bullet '•' para evitar símbolos raros
+                const splitRisk = doc.splitTextToSize(`- ${safeText(risk)}`, 170);
+                checkPageBreak(splitRisk.length * 5);
+                doc.text(splitRisk, 20, y);
+                y += (splitRisk.length * 5) + 2;
             });
             y += 10;
 
-            // --- 5. RECOMENDACIONES ---
+            // --- 5. ESTRATEGIA (Icono: Cuadrado Indigo/Amarillo) ---
             checkPageBreak(60);
             
-            // Calculamos altura necesaria para el cuadro de recomendaciones
-            let recHeight = 20; // Título + padding
+            // Calcular altura necesaria
+            let recHeight = 20;
             const recLines: string[][] = [];
             (aiData.recommendations || []).forEach((rec: string) => {
-                 const lines = doc.splitTextToSize(`• ${safeText(rec)}`, 160);
+                 const lines = doc.splitTextToSize(`- ${safeText(rec)}`, 160);
                  recLines.push(lines);
-                 recHeight += (lines.length * 5) + 4; // Altura de texto + gap
+                 recHeight += (lines.length * 5) + 4;
             });
 
             if (y + recHeight > pageHeight - 20) { doc.addPage(); y = 20; }
             
-            doc.setFillColor(245, 247, 255);
+            doc.setFillColor(245, 247, 255); // Fondo azul claro
             doc.setDrawColor(200, 210, 255);
             doc.roundedRect(15, y, 180, recHeight, 3, 3, 'FD');
             
-            doc.setFontSize(14);
+            // Icono dibujado
+            doc.setFillColor(79, 70, 229); // Indigo
+            doc.circle(23, y + 8, 2, 'F');
+
+            doc.setFontSize(13);
             doc.setTextColor(79, 70, 229);
-            doc.text("💡 Estrategia Sugerida", 25, y + 10);
+            doc.text("ESTRATEGIA SUGERIDA", 28, y + 10);
             y += 20;
             
             doc.setFontSize(10);
@@ -181,17 +203,20 @@ const Dashboard: React.FC = () => {
                 doc.text(lines, 25, y);
                 y += (lines.length * 5) + 4;
             });
-            y += 10; // Salir del cuadro
+            y += 15;
 
             // ============================================================
-            // --- NUEVA SECCIÓN: AUDITORÍA TAREA POR TAREA (MEJORADA) ---
+            // --- NUEVA SECCIÓN: AUDITORÍA DETALLADA ---
             // ============================================================
             doc.addPage(); 
             y = 20;
             
-            doc.setFontSize(16);
+            doc.setFillColor(100, 100, 100); // Gris
+            doc.rect(20, y - 5, 5, 5, 'F');
+
+            doc.setFontSize(15);
             doc.setTextColor(0);
-            doc.text("📋 Auditoría Detallada de Tareas", 20, y);
+            doc.text("AUDITORÍA DETALLADA DE TAREAS", 29, y);
             y += 15;
 
             const tasksToPrint = (aiData.analyzed_tasks && aiData.analyzed_tasks.length > 0) 
@@ -199,7 +224,7 @@ const Dashboard: React.FC = () => {
                                 : tasks.map(t => ({ original_title: t.title, ai_audit: "Análisis no disponible", smart_priority: t.priority }));
 
             tasksToPrint.forEach((task: any, index: number) => {
-                // 1. Calcular alturas dinámicas
+                // Cálculo de altura
                 doc.setFontSize(11);
                 doc.setFont("helvetica", "bold");
                 const titleLines = doc.splitTextToSize(`${index + 1}. ${safeText(task.original_title)}`, 160);
@@ -210,27 +235,25 @@ const Dashboard: React.FC = () => {
                 const auditLines = doc.splitTextToSize(`IA: "${safeText(task.ai_audit || "Sin comentarios.")}"`, 160);
                 const hAudit = auditLines.length * 5;
 
-                // Altura total de la caja = Padding Top (5) + Titulo + Gap (5) + Prioridad (5) + Gap (5) + Auditoria + Padding Bottom (5)
-                const boxHeight = 5 + hTitle + 8 + 5 + 8 + hAudit + 5;
+                // Altura total dinámica
+                const boxHeight = 10 + hTitle + 5 + 5 + hAudit + 5;
 
-                // 2. Verificar salto de página
                 checkPageBreak(boxHeight + 10);
 
-                // 3. Dibujar Caja Fondo
+                // Caja Fondo
                 doc.setDrawColor(230);
                 doc.setFillColor(255, 255, 255);
                 if (index % 2 === 0) doc.setFillColor(250, 250, 252);
                 doc.roundedRect(20, y, 170, boxHeight, 2, 2, 'FD');
 
-                // 4. Dibujar Contenido
-                let currentY = y + 6;
+                let currentY = y + 8;
 
                 // Título
                 doc.setFontSize(11);
                 doc.setTextColor(0);
                 doc.setFont("helvetica", "bold");
                 doc.text(titleLines, 25, currentY);
-                currentY += hTitle + 8;
+                currentY += hTitle + 5;
 
                 // Prioridad
                 doc.setFontSize(9);
@@ -240,17 +263,17 @@ const Dashboard: React.FC = () => {
                 if (pText.includes('crítica') || pText.includes('alta')) pColor = [220, 38, 38];
                 if (pText.includes('baja')) pColor = [34, 197, 94];
                 doc.setTextColor(pColor[0], pColor[1], pColor[2]);
+                
                 doc.text(`Prioridad Sugerida: ${safeText(task.smart_priority)}`, 25, currentY);
-                currentY += 8;
+                currentY += 5;
 
-                // Auditoría
+                // Auditoría IA
                 doc.setFontSize(10);
                 doc.setTextColor(60);
                 doc.setFont("helvetica", "italic");
                 doc.text(auditLines, 25, currentY);
 
-                // 5. Avanzar cursor general
-                y += boxHeight + 8; // Espacio entre cajas
+                y += boxHeight + 5;
             });
 
             doc.save(`Auditoria_IA_${wsName.replace(/\s+/g, '_')}.pdf`);
