@@ -191,7 +191,6 @@ const Dashboard: React.FC = () => {
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(9);
                 doc.setTextColor(100);
-                // AQUI SE INCLUYE LA FECHA DE CREACION
                 doc.text(`Creado: ${createdDate} | Prioridad Sugerida: ${cleanText(task.smart_priority)}`, 25, cy);
                 cy += 6;
 
@@ -252,3 +251,26 @@ const Dashboard: React.FC = () => {
                             <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100"><Sun className="h-5 w-5 hidden dark:block" /><Moon className="h-5 w-5 dark:hidden" /></button>
                             <button onClick={() => supabase.auth.signOut()} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:text-red-500"><LogOut className="h-5 w-5" /></button>
                         </div>
+                    </div>
+                </div>
+            </header>
+            <main className="flex-1 overflow-hidden p-4 md:p-6 bg-gray-50 dark:bg-gray-950/50 transition-colors duration-300 pb-[50px]">
+                {currentWorkspaceId ? <div className="h-full w-full"><KanbanBoard /></div> : <div className="flex items-center justify-center h-full text-gray-500">Selecciona un espacio de trabajo</div>}
+            </main>
+            <TaskModal />
+            <WorkspaceManager />
+            <footer className={`fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg transition-all duration-300 ease-in-out transform ${isAudioDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-40px)]'}`} style={{ maxHeight: isAudioDrawerOpen ? '400px' : '40px' }}>
+                <div onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)} className="h-[40px] flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                    <Mic size={16} className="text-indigo-500 mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-2">{isAudioDrawerOpen ? 'Ocultar Grabadora' : 'Dictar Tarea'}</span>
+                    {isAudioDrawerOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronUp size={16} className="text-gray-400" />}
+                </div>
+                <div className={`overflow-hidden transition-opacity duration-300 ${isAudioDrawerOpen ? 'opacity-100 visible' : 'opacity-0 invisible h-0'}`}>
+                    <div className="p-4 border-t border-gray-100 dark:border-gray-800/50"><AudioRecorder /></div>
+                </div>
+            </footer>
+        </div>
+    );
+};
+
+export default Dashboard;
