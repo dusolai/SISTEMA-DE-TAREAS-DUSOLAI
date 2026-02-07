@@ -1,54 +1,48 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Task } from '../types';
 
 interface UIState {
-  // Estado del Modal
-  isTaskModalOpen: boolean;
-  selectedTask: Task | null;
-  openTaskModal: (task?: Task) => void; // <--- Ahora acepta vacío (undefined)
-  closeTaskModal: () => void;
+    theme: 'light' | 'dark';
+    isWorkspaceManagerOpen: boolean;
+    isTaskModalOpen: boolean;
+    currentWorkspaceId: string | null;
+    selectedTask: Task | null; // Aquí guardamos la tarea activa
 
-  // Estado del Tema
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
-
-  // Estado del Workspace
-  currentWorkspaceId: string | null;
-  setWorkspace: (id: string | null) => void;
-  
-  // Estado del Gestor de Workspaces
-  isWorkspaceManagerOpen: boolean;
-  openWorkspaceManager: () => void;
-  closeWorkspaceManager: () => void;
+    toggleTheme: () => void;
+    openWorkspaceManager: () => void;
+    closeWorkspaceManager: () => void;
+    
+    openTaskModal: (task?: Task) => void; // Acepta tarea opcional
+    closeTaskModal: () => void;
+    
+    setWorkspace: (id: string) => void;
 }
 
-export const useUIStore = create<UIState>()(
-  persist(
-    (set) => ({
-      // Modal Tareas
-      isTaskModalOpen: false,
-      selectedTask: null,
-      // Si no pasamos tarea, ponemos selectedTask a null (Modo Creación)
-      openTaskModal: (task) => set({ isTaskModalOpen: true, selectedTask: task || null }),
-      closeTaskModal: () => set({ isTaskModalOpen: false, selectedTask: null }),
+export const useUIStore = create<UIState>((set) => ({
+    theme: 'light',
+    isWorkspaceManagerOpen: false,
+    isTaskModalOpen: false,
+    currentWorkspaceId: null,
+    selectedTask: null,
 
-      // Gestor de Workspaces
-      isWorkspaceManagerOpen: false,
-      openWorkspaceManager: () => set({ isWorkspaceManagerOpen: true }),
-      closeWorkspaceManager: () => set({ isWorkspaceManagerOpen: false }),
-
-      // Tema
-      theme: 'dark',
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
-
-      // Workspace
-      currentWorkspaceId: null,
-      setWorkspace: (id) => set({ currentWorkspaceId: id }),
+    toggleTheme: () => set((state) => {
+        const newTheme = state.theme === 'light' ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+        return { theme: newTheme };
     }),
-    {
-      name: 'dusolai-ui-storage',
-      partialize: (state) => ({ theme: state.theme, currentWorkspaceId: state.currentWorkspaceId }), 
-    }
-  )
-);
+
+    openWorkspaceManager: () => set({ isWorkspaceManagerOpen: true }),
+    closeWorkspaceManager: () => set({ isWorkspaceManagerOpen: false }),
+
+    openTaskModal: (task) => set({ 
+        isTaskModalOpen: true, 
+        selectedTask: task || null 
+    }),
+    
+    closeTaskModal: () => set({ 
+        isTaskModalOpen: false, 
+        selectedTask: null 
+    }),
+
+    setWorkspace: (id) => set({ currentWorkspaceId: id }),
+}));
