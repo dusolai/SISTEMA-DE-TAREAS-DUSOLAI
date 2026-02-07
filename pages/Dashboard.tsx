@@ -28,9 +28,11 @@ const Dashboard: React.FC = () => {
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
+    // --- FUNCIÓN SEGURA DE TEXTO ---
+    // Elimina caracteres que rompen el PDF pero mantiene acentos españoles
     const safeText = (text: any): string => {
         if (text === null || text === undefined) return "";
-        return String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC]/g, "").trim(); 
+        return String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC\n\r]/g, "").trim(); 
     };
 
     const handleGeneratePDF = async () => {
@@ -43,10 +45,10 @@ const Dashboard: React.FC = () => {
         try {
             const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'Proyecto';
             
-            // 1. OBTENER AUDITORÍA COMPLETA DE GEMINI
+            // 1. OBTENER DATOS DE IA
             const aiData = await generateProjectReportData(tasks, wsName);
             
-            // 2. Datos para gráficos (estos siguen siendo calculados en local para precisión numérica)
+            // 2. DATOS ESTADÍSTICOS LOCALES
             const total = tasks.length;
             const statusCounts = {
                 todo: tasks.filter(t => t.status === 'todo').length,
@@ -57,10 +59,11 @@ const Dashboard: React.FC = () => {
 
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
             let y = 20;
 
             const checkPageBreak = (spaceNeeded: number) => {
-                if (y + spaceNeeded > 280) {
+                if (y + spaceNeeded > pageHeight - 20) {
                     doc.addPage();
                     y = 20;
                     return true;
@@ -75,14 +78,14 @@ const Dashboard: React.FC = () => {
             
             doc.setFontSize(10);
             doc.setTextColor(100);
-            doc.text(`Análisis Inteligente Dusolai | ${new Date().toLocaleDateString()}`, 20, y + 6);
+            doc.text(`Generado por Dusolai | ${new Date().toLocaleDateString()}`, 20, y + 6);
             y += 20;
 
             doc.setDrawColor(200);
             doc.line(20, y, pageWidth - 20, y);
             y += 15;
 
-            // --- SECCIÓN 1: SALUD ---
+            // --- 1. DIAGNÓSTICO ---
             doc.setFontSize(14);
             doc.setTextColor(0);
             doc.text("1. Diagnóstico de Salud", 20, y);
@@ -102,12 +105,11 @@ const Dashboard: React.FC = () => {
             doc.text(`${score}/100 - ${safeText(aiData.mood || 'Normal')}`, 190, y + 6, { align: 'right' });
             y += 20;
 
-            // --- SECCIÓN 2: CARGA DE TRABAJO ---
+            // --- 2. DISTRIBUCIÓN ---
             doc.setFontSize(14);
             doc.setTextColor(0);
             doc.text("2. Distribución Actual", 20, y);
             y += 10;
-            // (Gráfico de barras igual que antes, es puramente estadístico)
             const wTodo = (statusCounts.todo / total) * 170;
             const wDoing = (statusCounts.doing / total) * 170;
             const wReview = (statusCounts.review / total) * 170;
@@ -123,7 +125,7 @@ const Dashboard: React.FC = () => {
             doc.text(`Pendiente: ${statusCounts.todo} | En Curso: ${statusCounts.doing} | Revisión: ${statusCounts.review} | Hecho: ${statusCounts.done}`, 20, y);
             y += 15;
 
-            // --- SECCIÓN 3: ANÁLISIS EJECUTIVO ---
+            // --- 3. RESUMEN EJECUTIVO (Multilínea seguro) ---
             doc.setFontSize(14);
             doc.setTextColor(0);
             doc.text("3. Opinión del Auditor (IA)", 20, y);
@@ -134,7 +136,7 @@ const Dashboard: React.FC = () => {
             doc.text(splitSummary, 20, y);
             y += (splitSummary.length * 5) + 10;
 
-            // --- SECCIÓN 4: RIESGOS ---
+            // --- 4. RIESGOS ---
             checkPageBreak(50);
             doc.setFontSize(14);
             doc.setTextColor(220, 38, 38);
@@ -143,35 +145,46 @@ const Dashboard: React.FC = () => {
             doc.setFontSize(11);
             doc.setTextColor(60);
             (aiData.key_risks || []).forEach((risk: string) => {
-                checkPageBreak(10);
-                doc.text(`• ${safeText(risk)}`, 25, y);
-                y += 6;
+                const splitRisk = doc.splitTextToSize(`• ${safeText(risk)}`, 170);
+                checkPageBreak(splitRisk.length * 6);
+                doc.text(splitRisk, 25, y);
+                y += (splitRisk.length * 6) + 2;
             });
             y += 10;
 
-            // --- SECCIÓN 5: RECOMENDACIONES ---
+            // --- 5. RECOMENDACIONES ---
             checkPageBreak(60);
+            
+            // Calculamos altura necesaria para el cuadro de recomendaciones
+            let recHeight = 20; // Título + padding
+            const recLines: string[][] = [];
+            (aiData.recommendations || []).forEach((rec: string) => {
+                 const lines = doc.splitTextToSize(`• ${safeText(rec)}`, 160);
+                 recLines.push(lines);
+                 recHeight += (lines.length * 5) + 4; // Altura de texto + gap
+            });
+
+            if (y + recHeight > pageHeight - 20) { doc.addPage(); y = 20; }
+            
             doc.setFillColor(245, 247, 255);
             doc.setDrawColor(200, 210, 255);
-            if (y + 45 > 280) { doc.addPage(); y = 20; }
-            doc.roundedRect(15, y, 180, 50, 3, 3, 'FD');
+            doc.roundedRect(15, y, 180, recHeight, 3, 3, 'FD');
             
             doc.setFontSize(14);
             doc.setTextColor(79, 70, 229);
             doc.text("💡 Estrategia Sugerida", 25, y + 10);
             y += 20;
+            
             doc.setFontSize(10);
             doc.setTextColor(50);
-            (aiData.recommendations || []).forEach((rec: string) => {
-                const splitRec = doc.splitTextToSize(`• ${safeText(rec)}`, 160);
-                if (splitRec.length > 2) splitRec.length = 2; 
-                doc.text(splitRec, 25, y);
-                y += (splitRec.length * 5);
+            recLines.forEach((lines) => {
+                doc.text(lines, 25, y);
+                y += (lines.length * 5) + 4;
             });
-            y += 15; // Salir del cuadro
+            y += 10; // Salir del cuadro
 
             // ============================================================
-            // --- NUEVA SECCIÓN: AUDITORÍA TAREA POR TAREA ---
+            // --- NUEVA SECCIÓN: AUDITORÍA TAREA POR TAREA (MEJORADA) ---
             // ============================================================
             doc.addPage(); 
             y = 20;
@@ -181,49 +194,63 @@ const Dashboard: React.FC = () => {
             doc.text("📋 Auditoría Detallada de Tareas", 20, y);
             y += 15;
 
-            // Usamos los datos devueltos por la IA, o hacemos fallback a las tareas locales si la IA no devolvió nada
             const tasksToPrint = (aiData.analyzed_tasks && aiData.analyzed_tasks.length > 0) 
                                 ? aiData.analyzed_tasks 
                                 : tasks.map(t => ({ original_title: t.title, ai_audit: "Análisis no disponible", smart_priority: t.priority }));
 
             tasksToPrint.forEach((task: any, index: number) => {
-                checkPageBreak(40);
+                // 1. Calcular alturas dinámicas
+                doc.setFontSize(11);
+                doc.setFont("helvetica", "bold");
+                const titleLines = doc.splitTextToSize(`${index + 1}. ${safeText(task.original_title)}`, 160);
+                const hTitle = titleLines.length * 5;
 
-                // Caja de tarea
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "italic");
+                const auditLines = doc.splitTextToSize(`IA: "${safeText(task.ai_audit || "Sin comentarios.")}"`, 160);
+                const hAudit = auditLines.length * 5;
+
+                // Altura total de la caja = Padding Top (5) + Titulo + Gap (5) + Prioridad (5) + Gap (5) + Auditoria + Padding Bottom (5)
+                const boxHeight = 5 + hTitle + 8 + 5 + 8 + hAudit + 5;
+
+                // 2. Verificar salto de página
+                checkPageBreak(boxHeight + 10);
+
+                // 3. Dibujar Caja Fondo
                 doc.setDrawColor(230);
                 doc.setFillColor(255, 255, 255);
-                if (index % 2 === 0) doc.setFillColor(250, 250, 252); // Alternar color fondo
-                doc.roundedRect(20, y - 5, 170, 30, 2, 2, 'FD');
+                if (index % 2 === 0) doc.setFillColor(250, 250, 252);
+                doc.roundedRect(20, y, 170, boxHeight, 2, 2, 'FD');
+
+                // 4. Dibujar Contenido
+                let currentY = y + 6;
 
                 // Título
                 doc.setFontSize(11);
                 doc.setTextColor(0);
                 doc.setFont("helvetica", "bold");
-                doc.text(`${index + 1}. ${safeText(task.original_title)}`, 25, y + 5);
-                
-                // Prioridad Inteligente (Badge)
+                doc.text(titleLines, 25, currentY);
+                currentY += hTitle + 8;
+
+                // Prioridad
                 doc.setFontSize(9);
                 doc.setFont("helvetica", "normal");
-                
-                let pColor = [100, 100, 100]; // Gris
+                let pColor = [100, 100, 100];
                 const pText = safeText(task.smart_priority || 'Normal').toLowerCase();
-                if (pText.includes('crítica') || pText.includes('alta')) pColor = [220, 38, 38]; // Rojo
-                if (pText.includes('baja')) pColor = [34, 197, 94]; // Verde
-
+                if (pText.includes('crítica') || pText.includes('alta')) pColor = [220, 38, 38];
+                if (pText.includes('baja')) pColor = [34, 197, 94];
                 doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-                doc.text(`Prioridad IA: ${safeText(task.smart_priority)}`, 140, y + 5);
+                doc.text(`Prioridad Sugerida: ${safeText(task.smart_priority)}`, 25, currentY);
+                currentY += 8;
 
-                // Auditoría IA (El valor clave)
+                // Auditoría
                 doc.setFontSize(10);
                 doc.setTextColor(60);
-                doc.setFont("helvetica", "italic"); // Cursiva para denotar que habla la IA
-                
-                const auditText = `IA: "${safeText(task.ai_audit || "Sin comentarios.")}"`;
-                const splitAudit = doc.splitTextToSize(auditText, 160);
-                
-                doc.text(splitAudit, 25, y + 14);
+                doc.setFont("helvetica", "italic");
+                doc.text(auditLines, 25, currentY);
 
-                y += 35; // Espacio fijo por bloque
+                // 5. Avanzar cursor general
+                y += boxHeight + 8; // Espacio entre cajas
             });
 
             doc.save(`Auditoria_IA_${wsName.replace(/\s+/g, '_')}.pdf`);
@@ -270,7 +297,6 @@ const Dashboard: React.FC = () => {
                                     </select>
                                 </div>
                                 
-                                {/* BOTÓN DE AUDITORÍA IA */}
                                 <button 
                                     onClick={handleGeneratePDF} 
                                     disabled={isGeneratingReport || !currentWorkspaceId || !tasks || tasks.length === 0}
