@@ -4,22 +4,36 @@ export interface Workspace {
     created_at?: string;
 }
 
+// NUEVO: Estructura del evento de historial
+export interface HistoryEvent {
+    id: string;
+    action: 'creation' | 'update' | 'status_change' | 'comment';
+    details: string; // El mensaje del cambio
+    timestamp: string;
+    user_email?: string;
+}
+
 export interface Task {
-  id: string;
-  created_at: string;
-  title: string;
-  status: 'todo' | 'doing' | 'review' | 'done';
-  priority: 'low' | 'medium' | 'high';
-  project_id: string | null;
-  description: string | null;
-  order: number;
-  progress: number; // 0 a 100
-  assigned_to: string | null;
-  created_by: string;
-  workspace_id?: string; // <--- NUEVO CAMPO
-  audio_url?: string;
-  transcription?: string;
-  ai_extracted?: AiExtractedData;
+    // --- Campos Originales Tuyos ---
+    id: string;
+    created_at: string;
+    title: string;
+    status: 'todo' | 'doing' | 'review' | 'done';
+    priority: 'low' | 'medium' | 'high';
+    project_id: string | null;
+    description: string | null;
+    order: number; // Mantenemos 'order' (no order_index)
+    progress: number;
+    assigned_to: string | null;
+    created_by: string;
+    workspace_id?: string;
+    audio_url?: string;
+    transcription?: string;
+    ai_extracted?: AiExtractedData;
+
+    // --- NUEVOS CAMPOS PARA HISTORIAL ---
+    updated_at?: string; 
+    history?: HistoryEvent[]; 
 }
 
 export interface Subtask {

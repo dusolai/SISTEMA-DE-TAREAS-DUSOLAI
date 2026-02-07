@@ -1,344 +1,169 @@
 import React, { useState, useEffect } from 'react';
+import { X, Calendar, Clock, GitCommit, FileText, Activity, Plus } from 'lucide-react';
 import { useUIStore } from '../../../store/uiStore';
 import useTasks from '../hooks/useTasks';
-import useAuthStore from '../../../store/authStore'; // Necesario para saber QUIÉN crea la tarea
-import { useAudioRecorder } from '../../audio/hooks/useAudioRecorder';
-import { generateSubtasksFromText, updateTaskWithAudio } from '../../../services/geminiService';
-import { Task, Subtask } from '../../../types';
-import { X, Save, AlignLeft, CheckCircle2, CheckSquare, Square, Wand2, Mic, StopCircle, Loader2, RefreshCw, Send, Trash2 } from 'lucide-react';
-
-const blobToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(blob);
-    });
-};
+import { Task } from '../../../types';
 
 const TaskModal: React.FC = () => {
-    const { isTaskModalOpen, selectedTask, closeTaskModal } = useUIStore();
-    const { updateTaskMutation, createTaskMutation, deleteTaskMutation } = useTasks(); 
-    const { session } = useAuthStore();
-    
-    const mainAudio = useAudioRecorder();
-    const planAudio = useAudioRecorder();
+    const { isTaskModalOpen, taskModalData, closeTaskModal } = useUIStore();
+    const { createTask, updateTask } = useTasks();
+    const currentWorkspaceId = useUIStore((state) => state.currentWorkspaceId);
 
-    // Estados
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [priority, setPriority] = useState<Task['priority']>('medium');
     const [status, setStatus] = useState<Task['status']>('todo');
-    const [subtasks, setSubtasks] = useState<Subtask[]>([]);
-    
-    // Estados UI
-    const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-    const [isProcessingUpdate, setIsProcessingUpdate] = useState(false);
-    const [planPrompt, setPlanPrompt] = useState('');
-    const [showPlanInput, setShowPlanInput] = useState(false);
+    const [priority, setPriority] = useState<Task['priority']>('medium');
+    const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
 
-    // Cargar datos al abrir (Modo Edición vs Creación)
     useEffect(() => {
-        if (isTaskModalOpen) {
-            if (selectedTask) {
-                // MODO EDICIÓN: Cargamos datos
-                setTitle(selectedTask.title);
-                setDescription(selectedTask.description || '');
-                setPriority(selectedTask.priority);
-                setStatus(selectedTask.status);
-                setSubtasks(selectedTask.ai_extracted?.suggested_subtasks || []);
-                setShowPlanInput((selectedTask.ai_extracted?.suggested_subtasks || []).length === 0);
-            } else {
-                // MODO CREACIÓN: Limpiamos todo
-                setTitle('');
-                setDescription('');
-                setPriority('medium');
-                setStatus('todo');
-                setSubtasks([]);
-                setShowPlanInput(false);
-            }
+        if (taskModalData) {
+            setTitle(taskModalData.title);
+            setDescription(taskModalData.description || '');
+            setStatus(taskModalData.status);
+            setPriority(taskModalData.priority);
+            setActiveTab('details');
+        } else {
+            setTitle('');
+            setDescription('');
+            setStatus('todo');
+            setPriority('medium');
+            setActiveTab('details');
         }
-    }, [isTaskModalOpen, selectedTask]);
-
-    // Lógica de Audio (Igual que antes)
-    useEffect(() => {
-        const processAudioUpdate = async () => {
-            if (mainAudio.audioBlob && isTaskModalOpen) {
-                setIsProcessingUpdate(true);
-                try {
-                    const base64 = await blobToBase64(mainAudio.audioBlob);
-                    const currentContext = { title, description, priority, status, subtasks };
-                    const updatedData = await updateTaskWithAudio(currentContext, base64, mainAudio.mimeType);
-                    
-                    if (updatedData.title) setTitle(updatedData.title);
-                    if (updatedData.description) setDescription(updatedData.description);
-                    if (updatedData.priority) setPriority(updatedData.priority);
-                    if (updatedData.suggested_subtasks) setSubtasks(updatedData.suggested_subtasks);
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    setIsProcessingUpdate(false);
-                    mainAudio.resetRecording();
-                }
-            }
-        };
-        if (mainAudio.audioBlob) processAudioUpdate();
-    }, [mainAudio.audioBlob]);
-
-    useEffect(() => {
-        const processPlanAudio = async () => {
-            if (planAudio.audioBlob) {
-                setIsGeneratingPlan(true);
-                try {
-                    const base64 = await blobToBase64(planAudio.audioBlob);
-                    const currentContext = { title, description, subtasks: [] };
-                    const updatedData = await updateTaskWithAudio(currentContext, base64, planAudio.mimeType);
-                    if (updatedData.suggested_subtasks) setSubtasks(updatedData.suggested_subtasks);
-                    setPlanPrompt('');
-                    setShowPlanInput(false);
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    setIsGeneratingPlan(false);
-                    planAudio.resetRecording();
-                }
-            }
-        };
-        if (planAudio.audioBlob) processPlanAudio();
-    }, [planAudio.audioBlob]);
-
+    }, [taskModalData, isTaskModalOpen]);
 
     if (!isTaskModalOpen) return null;
 
-    const handleGeneratePlan = async () => {
-        if (!title) return;
-        setIsGeneratingPlan(true);
-        try {
-            const newSteps = await generateSubtasksFromText(title, description, planPrompt);
-            setSubtasks(newSteps);
-            setShowPlanInput(false);
-            setPlanPrompt('');
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsGeneratingPlan(false);
-        }
-    };
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!title.trim() || !currentWorkspaceId) return;
 
-    const handleToggleSubtask = (id: string) => {
-        setSubtasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-    };
-
-    const progressPercent = subtasks.length > 0 
-        ? Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100) 
-        : 0;
-
-    const handleSave = async () => {
-        if (!title.trim()) return;
-
-        const aiExtractedData = {
-            suggested_subtasks: subtasks,
-            ...selectedTask?.ai_extracted,
-            needs_clarification: false
-        };
-
-        if (selectedTask) {
-            // ACTUALIZAR
-            await updateTaskMutation.mutateAsync({
-                id: selectedTask.id,
-                updates: { 
-                    title, description, priority, status, progress: progressPercent,
-                    ai_extracted: aiExtractedData as any
-                }
-            });
+        if (taskModalData) {
+            await updateTask(taskModalData.id, { title, description, status, priority });
         } else {
-            // CREAR NUEVA
-            if (session?.user?.id) {
-                await createTaskMutation.mutateAsync({
-                    title,
-                    description,
-                    priority,
-                    status,
-                    created_by: session.user.id,
-                    progress: progressPercent,
-                    order: 0,
-                    ai_extracted: aiExtractedData as any
-                });
-            }
+            await createTask({
+                title, 
+                description, 
+                status, 
+                priority,
+                workspace_id: currentWorkspaceId,
+                order: 0, // CORREGIDO: order en lugar de order_index
+                progress: 0,
+                project_id: null,
+                assigned_to: null,
+                history: []
+            } as any);
         }
         closeTaskModal();
     };
 
-    const handleDelete = async () => {
-        if (selectedTask && confirm('¿Estás seguro de borrar esta tarea? No se puede deshacer.')) {
-            await deleteTaskMutation.mutateAsync(selectedTask.id);
-            closeTaskModal();
-        }
+    const formatDate = (dateString?: string) => {
+        if (!dateString) return '-';
+        return new Date(dateString).toLocaleString('es-ES', {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+        });
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="bg-gray-900 w-full max-w-3xl rounded-2xl shadow-2xl border border-gray-800 flex flex-col overflow-hidden max-h-[95vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 
-                {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-gray-800 bg-gray-900 shrink-0">
-                    <div className="flex items-center gap-4">
-                        <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">
-                            {selectedTask ? 'Editando Tarea' : 'Nueva Tarea'}
-                        </span>
-                        
-                        {isProcessingUpdate ? (
-                             <div className="flex items-center gap-2 text-indigo-400 animate-pulse px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20">
-                                <Loader2 className="animate-spin" size={16} /> <span className="text-xs font-medium">Procesando...</span>
-                             </div>
-                        ) : (
-                            // Solo mostramos botón de dictar cambios si estamos editando, o dictar tarea si es nueva
-                            <button onClick={mainAudio.isRecording ? mainAudio.stopRecording : mainAudio.startRecording} 
-                                className={`flex items-center gap-2 px-3 py-1.5 border rounded-full transition-all group ${
-                                    mainAudio.isRecording 
-                                    ? 'bg-red-500/20 text-red-400 border-red-500/50 animate-pulse' 
-                                    : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-500'
-                                }`}>
-                                {mainAudio.isRecording ? <StopCircle size={16}/> : <Mic size={16} className="group-hover:scale-110 transition-transform" />} 
-                                <span className="text-xs font-medium">
-                                    {mainAudio.isRecording ? 'Parar' : (selectedTask ? 'Dictar cambios' : 'Dictar tarea')}
-                                </span>
-                            </button>
-                        )}
-                    </div>
-                    <button onClick={closeTaskModal} className="text-gray-500 hover:text-white transition-colors p-1 rounded-full hover:bg-gray-800">
+                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                        {taskModalData ? 'Editar Tarea' : 'Nueva Tarea'}
+                    </h2>
+                    <button onClick={closeTaskModal} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-500">
                         <X size={20} />
                     </button>
                 </div>
 
-                {/* Cuerpo */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                    <input 
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full bg-transparent text-3xl font-bold text-white placeholder-gray-600 focus:outline-none leading-tight"
-                        placeholder="Escribe el título aquí..."
-                        autoFocus={!selectedTask}
-                    />
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* COLUMNA IZQUIERDA */}
-                        <div className="lg:col-span-2 space-y-8">
-                            
-                            {/* Plan de Acción */}
-                            <div className="bg-gray-800/30 rounded-xl border border-gray-700/50 p-4">
-                                <div className="flex items-center justify-between mb-4">
-                                    <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
-                                        <CheckCircle2 size={14} className="text-indigo-400"/> Plan de Acción
-                                    </label>
-                                    
-                                    {subtasks.length > 0 && !showPlanInput && (
-                                        <button onClick={() => setShowPlanInput(true)} className="text-xs flex items-center gap-1 text-gray-500 hover:text-indigo-400 transition-colors">
-                                            <RefreshCw size={12} /> Modificar
-                                        </button>
-                                    )}
-                                </div>
-
-                                {(showPlanInput || subtasks.length === 0) && (
-                                    <div className="mb-4 animate-in fade-in slide-in-from-top-2">
-                                        <div className="flex gap-2">
-                                            <div className="relative flex-1">
-                                                <input
-                                                    value={planPrompt}
-                                                    onChange={(e) => setPlanPrompt(e.target.value)}
-                                                    placeholder="Ej: Lista de 3 pasos para..."
-                                                    className="w-full bg-gray-900 border border-gray-600 text-sm rounded-lg pl-3 pr-10 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white placeholder-gray-500"
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleGeneratePlan()}
-                                                />
-                                                <button onClick={handleGeneratePlan} disabled={isGeneratingPlan || !title} className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-white disabled:opacity-50 p-1">
-                                                    {isGeneratingPlan ? <Loader2 className="animate-spin" size={16}/> : <Send size={16} />}
-                                                </button>
-                                            </div>
-                                            <button onClick={planAudio.isRecording ? planAudio.stopRecording : planAudio.startRecording} className={`p-2.5 rounded-lg border transition-all ${planAudio.isRecording ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' : 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white hover:border-gray-500'}`}>
-                                                {planAudio.isRecording ? <StopCircle size={18} /> : <Mic size={18} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {subtasks.length > 0 && (
-                                    <div className="space-y-2">
-                                         <div className="h-1 w-full bg-gray-700/50 rounded-full mb-3 overflow-hidden">
-                                            <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-                                        </div>
-                                        {subtasks.map((subtask) => (
-                                            <div key={subtask.id} onClick={() => handleToggleSubtask(subtask.id)} className={`group flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-all select-none ${subtask.completed ? 'bg-gray-800/20 text-gray-500' : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-200'}`}>
-                                                <div className={`mt-0.5 ${subtask.completed ? 'text-indigo-500' : 'text-gray-600 group-hover:text-gray-400'}`}>
-                                                    {subtask.completed ? <CheckSquare size={18} /> : <Square size={18} />}
-                                                </div>
-                                                <span className={`text-sm leading-snug ${subtask.completed ? 'line-through opacity-50' : ''}`}>{subtask.text}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Descripción */}
-                            <div>
-                                <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2 mb-2">
-                                    <AlignLeft size={14} /> Notas
-                                </label>
-                                <textarea 
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    rows={6}
-                                    className="w-full bg-gray-900/50 border border-gray-700 rounded-xl p-4 text-gray-300 text-sm leading-relaxed focus:ring-1 focus:ring-indigo-500 focus:outline-none resize-none"
-                                    placeholder="Detalles adicionales..."
-                                />
-                            </div>
-                        </div>
-
-                        {/* COLUMNA DERECHA */}
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Prioridad</label>
-                                <div className="flex flex-col gap-2">
-                                    {(['low', 'medium', 'high'] as const).map((p) => (
-                                        <button key={p} onClick={() => setPriority(p)} className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all text-left capitalize flex items-center justify-between ${priority === p ? (p === 'high' ? 'bg-red-500/10 border-red-500/50 text-red-400' : p === 'medium' ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'bg-green-500/10 border-green-500/50 text-green-400') : 'border-transparent bg-gray-800/50 hover:bg-gray-700 text-gray-400'}`}>
-                                            {p}
-                                            {priority === p && <div className={`w-2 h-2 rounded-full ${p === 'high' ? 'bg-red-500' : p === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`} />}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Estado</label>
-                                <select value={status} onChange={(e) => setStatus(e.target.value as Task['status'])} className="w-full bg-gray-800/50 border border-gray-700 text-gray-300 text-sm rounded-lg p-2.5 focus:ring-indigo-500 focus:bg-gray-800 outline-none">
-                                    <option value="todo">Por hacer</option>
-                                    <option value="doing">En Progreso</option>
-                                    <option value="review">En Revisión</option>
-                                    <option value="done">Completada</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer de Acciones */}
-                <div className="p-5 bg-gray-900 border-t border-gray-800 flex justify-between items-center shrink-0 z-10">
-                    <div>
-                        {selectedTask && (
-                            <button onClick={handleDelete} className="flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors text-sm border border-transparent hover:border-red-500/20">
-                                <Trash2 size={18} /> <span className="hidden sm:inline">Eliminar</span>
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex gap-3">
-                        <button onClick={closeTaskModal} className="px-5 py-2 text-gray-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
-                        <button onClick={handleSave} disabled={!title.trim()} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg shadow-lg shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <Save size={18} /> {selectedTask ? 'Guardar Cambios' : 'Crear Tarea'}
+                {taskModalData && (
+                    <div className="flex border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+                        <button 
+                            onClick={() => setActiveTab('details')}
+                            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${activeTab === 'details' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500'}`}
+                        >
+                            <FileText size={16} /> Detalles
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('history')}
+                            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500'}`}
+                        >
+                            <Activity size={16} /> Historial
                         </button>
                     </div>
+                )}
+
+                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                    {activeTab === 'details' ? (
+                        <form id="taskForm" onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título</label>
+                                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none" required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
+                                    <select value={status} onChange={(e) => setStatus(e.target.value as any)} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        <option value="todo">Por Hacer</option>
+                                        <option value="doing">En Progreso</option>
+                                        <option value="review">Revisión</option>
+                                        <option value="done">Completado</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prioridad</label>
+                                    <select value={priority} onChange={(e) => setPriority(e.target.value as any)} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        <option value="low">Baja</option>
+                                        <option value="medium">Media</option>
+                                        <option value="high">Alta</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
+                                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" />
+                            </div>
+                            {taskModalData && (
+                                <div className="text-xs text-gray-400 mt-2 flex items-center gap-2">
+                                    <Calendar size={14} /> Creado el: {formatDate(taskModalData.created_at)}
+                                </div>
+                            )}
+                        </form>
+                    ) : (
+                        <div className="space-y-6 relative pl-2">
+                            <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-gray-200 dark:bg-gray-700 z-0"></div>
+                            {(!taskModalData?.history || taskModalData.history.length === 0) ? (
+                                <p className="text-gray-500 text-center italic">Sin historial reciente.</p>
+                            ) : (
+                                [...taskModalData.history].reverse().map((event, index) => (
+                                    <div key={event.id || index} className="relative z-10 flex gap-4">
+                                        <div className={`mt-1 w-8 h-8 rounded-full border-2 flex items-center justify-center bg-white dark:bg-gray-900 ${event.action === 'creation' ? 'border-green-500 text-green-500' : 'border-blue-500 text-blue-500'}`}>
+                                            {event.action === 'creation' ? <Plus size={14} /> : <GitCommit size={14} />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-baseline">
+                                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{event.details}</p>
+                                                <time className="text-xs text-gray-400">{formatDate(event.timestamp)}</time>
+                                            </div>
+                                            <p className="text-xs text-gray-500 uppercase mt-1">{event.action.replace('_', ' ')}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
                 </div>
+
+                {activeTab === 'details' && (
+                    <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 bg-gray-50 dark:bg-gray-900/50">
+                        <button type="button" onClick={closeTaskModal} className="px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Cancelar</button>
+                        <button type="submit" form="taskForm" className="px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
+                            {taskModalData ? 'Guardar' : 'Crear'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
-
 export default TaskModal;

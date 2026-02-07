@@ -15,7 +15,6 @@ import { LogOut, Sun, Moon, Briefcase, Settings, ChevronUp, ChevronDown, Mic, Pl
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
     const { toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager, openTaskModal } = useUIStore();
-
     const [isAudioDrawerOpen, setIsAudioDrawerOpen] = useState(false);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     
@@ -28,11 +27,10 @@ const Dashboard: React.FC = () => {
         }
     }, [currentWorkspaceId, workspaces, setWorkspace]);
 
-    // --- FUNCIÓN SEGURA DE TEXTO ---
-    // Limpia caracteres que rompen el PDF (emojis, símbolos raros) pero mantiene acentos
-    const safeText = (text: any): string => {
-        if (text === null || text === undefined) return "";
-        // Mantiene ASCII, Latin-1 (acentos) y saltos de línea. Elimina todo lo demás.
+    // Limpiador agresivo de texto: Solo permite ASCII básico y saltos de línea
+    // Esto ELIMINA emojis y símbolos raros que rompen el PDF
+    const cleanText = (text: any): string => {
+        if (!text) return "";
         return String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC\n\r]/g, "").trim(); 
     };
 
@@ -45,11 +43,8 @@ const Dashboard: React.FC = () => {
         setIsGeneratingReport(true);
         try {
             const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'Proyecto';
-            
-            // 1. OBTENER DATOS DE IA
             const aiData = await generateProjectReportData(tasks, wsName);
             
-            // 2. DATOS ESTADÍSTICOS
             const total = tasks.length;
             const statusCounts = {
                 todo: tasks.filter(t => t.status === 'todo').length,
@@ -72,215 +67,146 @@ const Dashboard: React.FC = () => {
                 return false;
             };
 
-            // --- HEADER ---
+            // === HEADER SIN EMOJIS ===
             doc.setFontSize(20);
-            doc.setTextColor(79, 70, 229); // Indigo
+            doc.setTextColor(50, 50, 50);
             doc.setFont("helvetica", "bold");
-            doc.text("AUDITORÍA DE PROYECTO CON IA", 20, y);
+            doc.text("INFORME DE SITUACION - DUSOLAI", 20, y);
             
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
             doc.setTextColor(100);
-            doc.text(`Generado por Dusolai | ${new Date().toLocaleDateString()}`, 20, y + 6);
+            doc.text(`Fecha: ${new Date().toLocaleDateString()} | Proyecto: ${cleanText(wsName)}`, 20, y + 6);
             y += 20;
-
             doc.setDrawColor(200);
             doc.line(20, y, pageWidth - 20, y);
             y += 15;
 
-            // --- 1. DIAGNÓSTICO (Icono: Barra de Color) ---
+            // === 1. SALUD ===
             doc.setFontSize(14);
             doc.setTextColor(0);
-            doc.text("1. Diagnóstico de Salud", 20, y);
+            doc.text("1. SALUD DEL PROYECTO", 20, y);
             y += 10;
-
-            // Fondo barra
-            doc.setFillColor(240, 240, 240);
-            doc.roundedRect(20, y, 170, 10, 3, 3, 'F');
-            
-            // Barra progreso
+            doc.setFillColor(230, 230, 230);
+            doc.rect(20, y, 170, 8, 'F');
             const score = aiData.health_score || 50;
-            if (score > 75) doc.setFillColor(34, 197, 94); // Verde
-            else if (score > 40) doc.setFillColor(234, 179, 8); // Amarillo
-            else doc.setFillColor(239, 68, 68); // Rojo
-
-            doc.roundedRect(20, y, (170 * score) / 100, 10, 3, 3, 'F');
+            if (score > 75) doc.setFillColor(34, 197, 94);
+            else if (score > 40) doc.setFillColor(234, 179, 8);
+            else doc.setFillColor(239, 68, 68);
+            doc.rect(20, y, (170 * score) / 100, 8, 'F');
             doc.setFontSize(10);
             doc.setTextColor(50);
-            doc.text(`${score}/100 - ${safeText(aiData.mood || 'Normal')}`, 190, y + 6, { align: 'right' });
-            y += 25;
+            doc.text(`Puntuacion: ${score}/100`, 190, y + 6, { align: 'right' });
+            y += 20;
 
-            // --- 2. DISTRIBUCIÓN ---
+            // === 2. ESTADISTICAS ===
             doc.setFontSize(14);
             doc.setTextColor(0);
-            doc.text("2. Distribución de Carga", 20, y);
+            doc.text("2. ESTADISTICAS", 20, y);
             y += 10;
-            
-            // Gráfico Barras
-            const wTodo = (statusCounts.todo / total) * 170;
-            const wDoing = (statusCounts.doing / total) * 170;
-            const wReview = (statusCounts.review / total) * 170;
-            const wDone = (statusCounts.done / total) * 170;
-            let xBar = 20;
-            if (wTodo > 0) { doc.setFillColor(209, 213, 219); doc.rect(xBar, y, wTodo, 15, 'F'); xBar += wTodo; }
-            if (wDoing > 0) { doc.setFillColor(99, 102, 241); doc.rect(xBar, y, wDoing, 15, 'F'); xBar += wDoing; }
-            if (wReview > 0) { doc.setFillColor(245, 158, 11); doc.rect(xBar, y, wReview, 15, 'F'); xBar += wReview; }
-            if (wDone > 0) { doc.setFillColor(34, 197, 94); doc.rect(xBar, y, wDone, 15, 'F'); }
-            y += 20;
-            
-            doc.setFontSize(9);
-            doc.setTextColor(100);
-            doc.text(`Pendiente: ${statusCounts.todo}  |  En Curso: ${statusCounts.doing}  |  Revisión: ${statusCounts.review}  |  Hecho: ${statusCounts.done}`, 20, y);
-            y += 20;
+            doc.setFontSize(10);
+            doc.setTextColor(80);
+            doc.text(`Pendientes: ${statusCounts.todo}  |  En Curso: ${statusCounts.doing}  |  Revision: ${statusCounts.review}  |  Completadas: ${statusCounts.done}`, 20, y);
+            y += 15;
 
-            // --- 3. OPINIÓN IA (Icono: Cuadrado Azul) ---
-            doc.setFillColor(59, 130, 246); // Azul
-            doc.rect(20, y - 4, 4, 4, 'F'); 
-            
-            doc.setFontSize(13);
+            // === 3. RESUMEN ===
+            doc.setFontSize(14);
             doc.setTextColor(0);
-            doc.text("OPINIÓN DEL AUDITOR", 28, y);
+            doc.text("3. RESUMEN EJECUTIVO", 20, y);
             y += 8;
-            
             doc.setFontSize(10);
             doc.setTextColor(60);
-            const splitSummary = doc.splitTextToSize(safeText(aiData.executive_summary), 170);
-            doc.text(splitSummary, 20, y);
-            y += (splitSummary.length * 5) + 15;
+            const summaryLines = doc.splitTextToSize(cleanText(aiData.executive_summary), 170);
+            doc.text(summaryLines, 20, y);
+            y += (summaryLines.length * 5) + 10;
 
-            // --- 4. RIESGOS (Icono: Cuadrado Rojo) ---
-            checkPageBreak(50);
-            
-            doc.setFillColor(220, 38, 38); // Rojo
-            doc.rect(20, y - 4, 4, 4, 'F');
-            
-            doc.setFontSize(13);
-            doc.setTextColor(220, 38, 38);
-            doc.text("RIESGOS CRÍTICOS", 28, y);
+            // === 4. RIESGOS ===
+            checkPageBreak(40);
+            doc.setFontSize(14);
+            doc.setTextColor(200, 0, 0);
+            doc.text("4. RIESGOS DETECTADOS", 20, y);
             y += 8;
-            
             doc.setFontSize(10);
             doc.setTextColor(60);
             (aiData.key_risks || []).forEach((risk: string) => {
-                // Usamos guion '-' en lugar de bullet '•' para evitar símbolos raros
-                const splitRisk = doc.splitTextToSize(`- ${safeText(risk)}`, 170);
-                checkPageBreak(splitRisk.length * 5);
-                doc.text(splitRisk, 20, y);
-                y += (splitRisk.length * 5) + 2;
+                const lines = doc.splitTextToSize(`- ${cleanText(risk)}`, 170);
+                checkPageBreak(lines.length * 5);
+                doc.text(lines, 20, y);
+                y += (lines.length * 5) + 2;
             });
             y += 10;
 
-            // --- 5. ESTRATEGIA (Icono: Cuadrado Indigo/Amarillo) ---
-            checkPageBreak(60);
-            
-            // Calcular altura necesaria
-            let recHeight = 20;
-            const recLines: string[][] = [];
+            // === 5. RECOMENDACIONES ===
+            checkPageBreak(50);
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 200);
+            doc.text("5. RECOMENDACIONES", 20, y);
+            y += 8;
             (aiData.recommendations || []).forEach((rec: string) => {
-                 const lines = doc.splitTextToSize(`- ${safeText(rec)}`, 160);
-                 recLines.push(lines);
-                 recHeight += (lines.length * 5) + 4;
-            });
-
-            if (y + recHeight > pageHeight - 20) { doc.addPage(); y = 20; }
-            
-            doc.setFillColor(245, 247, 255); // Fondo azul claro
-            doc.setDrawColor(200, 210, 255);
-            doc.roundedRect(15, y, 180, recHeight, 3, 3, 'FD');
-            
-            // Icono dibujado
-            doc.setFillColor(79, 70, 229); // Indigo
-            doc.circle(23, y + 8, 2, 'F');
-
-            doc.setFontSize(13);
-            doc.setTextColor(79, 70, 229);
-            doc.text("ESTRATEGIA SUGERIDA", 28, y + 10);
-            y += 20;
-            
-            doc.setFontSize(10);
-            doc.setTextColor(50);
-            recLines.forEach((lines) => {
-                doc.text(lines, 25, y);
-                y += (lines.length * 5) + 4;
+                const lines = doc.splitTextToSize(`- ${cleanText(rec)}`, 170);
+                checkPageBreak(lines.length * 5);
+                doc.text(lines, 20, y);
+                y += (lines.length * 5) + 2;
             });
             y += 15;
 
-            // ============================================================
-            // --- NUEVA SECCIÓN: AUDITORÍA DETALLADA ---
-            // ============================================================
-            doc.addPage(); 
+            // === 6. AUDITORIA DETALLADA ===
+            doc.addPage();
             y = 20;
-            
-            doc.setFillColor(100, 100, 100); // Gris
-            doc.rect(20, y - 5, 5, 5, 'F');
-
-            doc.setFontSize(15);
+            doc.setFontSize(16);
             doc.setTextColor(0);
-            doc.text("AUDITORÍA DETALLADA DE TAREAS", 29, y);
+            doc.text("6. AUDITORIA DETALLADA", 20, y);
             y += 15;
 
             const tasksToPrint = (aiData.analyzed_tasks && aiData.analyzed_tasks.length > 0) 
                                 ? aiData.analyzed_tasks 
-                                : tasks.map(t => ({ original_title: t.title, ai_audit: "Análisis no disponible", smart_priority: t.priority }));
+                                : tasks.map(t => ({ original_title: t.title, ai_audit: "Sin analisis disponible", smart_priority: t.priority }));
 
             tasksToPrint.forEach((task: any, index: number) => {
-                // Cálculo de altura
+                const originalTask = tasks.find(t => t.title === task.original_title);
+                const createdDate = originalTask ? new Date(originalTask.created_at).toLocaleDateString() : "-";
+                
                 doc.setFontSize(11);
                 doc.setFont("helvetica", "bold");
-                const titleLines = doc.splitTextToSize(`${index + 1}. ${safeText(task.original_title)}`, 160);
-                const hTitle = titleLines.length * 5;
-
+                const titleLines = doc.splitTextToSize(`${index + 1}. ${cleanText(task.original_title)}`, 160);
+                
                 doc.setFontSize(10);
-                doc.setFont("helvetica", "italic");
-                const auditLines = doc.splitTextToSize(`IA: "${safeText(task.ai_audit || "Sin comentarios.")}"`, 160);
-                const hAudit = auditLines.length * 5;
+                doc.setFont("helvetica", "normal");
+                const auditLines = doc.splitTextToSize(`Analisis: ${cleanText(task.ai_audit)}`, 160);
+                
+                const boxHeight = (titleLines.length * 5) + (auditLines.length * 5) + 25;
+                checkPageBreak(boxHeight);
 
-                // Altura total dinámica
-                const boxHeight = 10 + hTitle + 5 + 5 + hAudit + 5;
+                doc.setDrawColor(200);
+                doc.setFillColor(250, 250, 250);
+                doc.rect(20, y, 170, boxHeight, 'FD');
 
-                checkPageBreak(boxHeight + 10);
-
-                // Caja Fondo
-                doc.setDrawColor(230);
-                doc.setFillColor(255, 255, 255);
-                if (index % 2 === 0) doc.setFillColor(250, 250, 252);
-                doc.roundedRect(20, y, 170, boxHeight, 2, 2, 'FD');
-
-                let currentY = y + 8;
-
-                // Título
-                doc.setFontSize(11);
+                let cy = y + 6;
+                
                 doc.setTextColor(0);
                 doc.setFont("helvetica", "bold");
-                doc.text(titleLines, 25, currentY);
-                currentY += hTitle + 5;
+                doc.text(titleLines, 25, cy);
+                cy += (titleLines.length * 5) + 4;
 
-                // Prioridad
-                doc.setFontSize(9);
                 doc.setFont("helvetica", "normal");
-                let pColor = [100, 100, 100];
-                const pText = safeText(task.smart_priority || 'Normal').toLowerCase();
-                if (pText.includes('crítica') || pText.includes('alta')) pColor = [220, 38, 38];
-                if (pText.includes('baja')) pColor = [34, 197, 94];
-                doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-                
-                doc.text(`Prioridad Sugerida: ${safeText(task.smart_priority)}`, 25, currentY);
-                currentY += 5;
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                // AQUI SE INCLUYE LA FECHA DE CREACION
+                doc.text(`Creado: ${createdDate} | Prioridad Sugerida: ${cleanText(task.smart_priority)}`, 25, cy);
+                cy += 6;
 
-                // Auditoría IA
                 doc.setFontSize(10);
-                doc.setTextColor(60);
-                doc.setFont("helvetica", "italic");
-                doc.text(auditLines, 25, currentY);
+                doc.setTextColor(50);
+                doc.text(auditLines, 25, cy);
 
                 y += boxHeight + 5;
             });
 
-            doc.save(`Auditoria_IA_${wsName.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`Informe_Dusolai_${wsName.replace(/\s+/g, '_')}.pdf`);
 
         } catch (error) {
             console.error("Error PDF:", error);
-            alert("Hubo un error al generar la auditoría.");
+            alert("Error al generar PDF.");
         } finally {
             setIsGeneratingReport(false);
         }
@@ -306,109 +232,23 @@ const Dashboard: React.FC = () => {
                                         className="pl-10 pr-8 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer appearance-none min-w-[160px] sm:min-w-[180px]"
                                         disabled={isLoadingWS}
                                     >
-                                        {isLoadingWS ? (
-                                            <option>Cargando...</option>
-                                        ) : workspaces?.length === 0 ? (
-                                            <option>Sin empresas</option>
-                                        ) : (
-                                            workspaces?.map(ws => (
-                                                <option key={ws.id} value={ws.id}>
-                                                    {ws.name}
-                                                </option>
-                                            ))
-                                        )}
+                                        {isLoadingWS ? <option>Cargando...</option> : workspaces?.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
                                     </select>
                                 </div>
-                                
                                 <button 
                                     onClick={handleGeneratePDF} 
                                     disabled={isGeneratingReport || !currentWorkspaceId || !tasks || tasks.length === 0}
-                                    className={`
-                                        flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all
-                                        ${isGeneratingReport 
-                                            ? 'bg-purple-50 text-purple-500 border-purple-100 cursor-wait' 
-                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:text-purple-500 shadow-sm'
-                                        }
-                                    `}
-                                    title="Analizar y Auditar con IA"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-indigo-500"
                                 >
-                                    {isGeneratingReport ? (
-                                        <>
-                                            <Loader2 size={16} className="animate-spin" />
-                                            <span className="hidden sm:inline">Auditando...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles size={16} className="text-purple-500" />
-                                            <span className="hidden sm:inline">Auditoría IA</span>
-                                        </>
-                                    )}
+                                    {isGeneratingReport ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                    <span className="hidden sm:inline">Informe PDF</span>
                                 </button>
-
-                                <button onClick={openWorkspaceManager} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors">
-                                    <Settings size={18} />
-                                </button>
-
-                                <button 
-                                    onClick={() => openTaskModal()} 
-                                    disabled={!currentWorkspaceId}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm shadow-md shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <Plus size={18} />
-                                    <span className="hidden sm:inline">Nueva</span>
-                                </button>
+                                <button onClick={openWorkspaceManager} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-indigo-500"><Settings size={18} /></button>
+                                <button onClick={() => openTaskModal()} disabled={!currentWorkspaceId} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm shadow-md"><Plus size={18} /><span className="hidden sm:inline">Nueva</span></button>
                             </div>
                         </div>
                         <div className="flex items-center space-x-4">
-                            <span className="text-gray-600 dark:text-gray-400 text-sm hidden md:block">
-                                {session?.user?.email}
-                            </span>
-                            <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                <Sun className="h-5 w-5 hidden dark:block" />
-                                <Moon className="h-5 w-5 dark:hidden" />
-                            </button>
-                            <button onClick={() => supabase.auth.signOut()} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/20 dark:hover:text-red-400 transition-all">
-                                <LogOut className="h-5 w-5" />
-                            </button>
+                            <span className="text-gray-600 dark:text-gray-400 text-sm hidden md:block">{session?.user?.email}</span>
+                            <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100"><Sun className="h-5 w-5 hidden dark:block" /><Moon className="h-5 w-5 dark:hidden" /></button>
+                            <button onClick={() => supabase.auth.signOut()} className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:text-red-500"><LogOut className="h-5 w-5" /></button>
                         </div>
-                    </div>
-                </div>
-            </header>
-
-            <main className="flex-1 overflow-hidden p-4 md:p-6 bg-gray-50 dark:bg-gray-950/50 transition-colors duration-300 pb-[50px]">
-                {currentWorkspaceId ? (
-                    <div className="h-full w-full">
-                        <KanbanBoard />
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-4 h-full items-center justify-center text-gray-500">
-                        <p>No tienes ningún espacio de trabajo seleccionado.</p>
-                        <button onClick={openWorkspaceManager} className="text-indigo-400 hover:underline">
-                            Crear uno nuevo
-                        </button>
-                    </div>
-                )}
-            </main>
-            
-            <TaskModal />
-            <WorkspaceManager />
-
-            <footer className={`fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] transition-all duration-300 ease-in-out transform ${isAudioDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-40px)]'}`} style={{ maxHeight: isAudioDrawerOpen ? '400px' : '40px' }}>
-                <div onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)} className="h-[40px] flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                    <Mic size={16} className="text-indigo-500 mr-2 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-2">
-                        {isAudioDrawerOpen ? 'Ocultar Grabadora' : 'Dictar Tarea'}
-                    </span>
-                    {isAudioDrawerOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronUp size={16} className="text-gray-400" />}
-                </div>
-                <div className={`overflow-hidden transition-opacity duration-300 ${isAudioDrawerOpen ? 'opacity-100 visible' : 'opacity-0 invisible h-0'}`}>
-                    <div className="p-4 border-t border-gray-100 dark:border-gray-800/50">
-                        <AudioRecorder />
-                    </div>
-                </div>
-            </footer>
-        </div>
-    );
-};
-
-export default Dashboard;
