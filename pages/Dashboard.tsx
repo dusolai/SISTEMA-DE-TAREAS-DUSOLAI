@@ -77,9 +77,9 @@ const Dashboard: React.FC = () => {
     const urgentTasks = tasks?.filter(t => t.priority === 'high').slice(0, 2) || [];
 
     return (
-        <div className="bg-slate-50 dark:bg-[#020412] font-sans text-slate-900 dark:text-white transition-colors duration-200 antialiased h-[100dvh] overflow-hidden flex flex-col">
+        <div className="font-sans transition-colors duration-200 antialiased h-[100dvh] overflow-hidden flex flex-col">
             {/* Mobile Layout Wrapper with Glass Effect */}
-            <div className="max-w-md mx-auto w-full h-full relative flex flex-col bg-white dark:bg-[#020412] shadow-2xl overflow-hidden border-x border-gray-100 dark:border-gray-800/50">
+            <div className="max-w-md mx-auto w-full h-full relative flex flex-col shadow-2xl overflow-hidden border-x border-gray-100 dark:border-gray-800/50">
 
                 {/* Header Section - Premium Glassmorphism */}
                 <header className="flex-shrink-0 pt-12 pb-5 px-6 flex items-center justify-between sticky top-0 z-30 bg-white/95 dark:bg-[#020412]/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800/50">
