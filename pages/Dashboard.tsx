@@ -165,9 +165,9 @@ const Dashboard: React.FC = () => {
 
                     {/* Kanban Section */}
                     <section>
-                        <h2 className="text-lg font-semibold mb-4">Pipeline</h2>
-                        <div className="bg-gray-50/50 dark:bg-gray-900/30 rounded-2xl p-2 min-h-[300px]">
-                            {currentWorkspaceId ? <KanbanBoard /> : <div className="flex items-center justify-center p-8 text-gray-500 italic">Selecciona un espacio</div>}
+                        <h2 className="text-lg font-semibold mb-3 px-1">Pipeline</h2>
+                        <div className="h-[500px] w-full">
+                            {currentWorkspaceId ? <KanbanBoard /> : <div className="flex items-center justify-center p-8 text-gray-400 italic bg-gray-50 dark:bg-card-dark/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">Selecciona un espacio</div>}
                         </div>
                     </section>
 

@@ -32,7 +32,7 @@ const KanbanBoard: React.FC = () => {
 
         const taskId = active.id as string;
         const overId = over.id.toString();
-        
+
         const currentTask = tasks.find(t => t.id === taskId);
         if (!currentTask) return;
 
@@ -42,7 +42,7 @@ const KanbanBoard: React.FC = () => {
                 // Actualizamos el estado usando la función nueva
                 await updateTask(taskId, { status: overId as any });
             }
-        } 
+        }
         // Caso 2: Soltar sobre otra tarea (reordenar o cambiar columna)
         else {
             const overTask = tasks.find(t => t.id === overId);
@@ -55,21 +55,22 @@ const KanbanBoard: React.FC = () => {
     };
 
     return (
-        <DndContext 
-            sensors={sensors} 
-            collisionDetection={closestCenter} 
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
         >
-            <div className="flex h-full gap-6 overflow-x-auto pb-4 items-start">
+            <div className="flex h-full gap-4 overflow-x-auto pb-4 items-start snap-x snap-mandatory no-scrollbar">
                 <SortableContext items={KANBAN_COLUMNS.map(c => c.id)} strategy={horizontalListSortingStrategy}>
                     {KANBAN_COLUMNS.map((column) => (
-                        <Column 
-                            key={column.id} 
-                            id={column.id} 
-                            title={column.title} 
-                            tasks={tasks.filter(t => t.status === column.id)} 
-                        />
+                        <div key={column.id} className="snap-center shrink-0">
+                            <Column
+                                id={column.id}
+                                title={column.title}
+                                tasks={tasks.filter(t => t.status === column.id)}
+                            />
+                        </div>
                     ))}
                 </SortableContext>
             </div>
