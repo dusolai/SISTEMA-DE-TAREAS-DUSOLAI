@@ -77,12 +77,12 @@ const Dashboard: React.FC = () => {
     const urgentTasks = tasks?.filter(t => t.priority === 'high').slice(0, 2) || [];
 
     return (
-        <div className="bg-background-light dark:bg-background-dark font-sans text-gray-900 dark:text-white transition-colors duration-200 antialiased h-screen overflow-hidden flex flex-col">
-            {/* Mobile Layout Wrapper */}
-            <div className="max-w-md mx-auto w-full h-full relative flex flex-col bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden">
+        <div className="bg-slate-50 dark:bg-[#020412] font-sans text-slate-900 dark:text-white transition-colors duration-200 antialiased h-[100dvh] overflow-hidden flex flex-col">
+            {/* Mobile Layout Wrapper with Glass Effect */}
+            <div className="max-w-md mx-auto w-full h-full relative flex flex-col bg-white dark:bg-[#020412] shadow-2xl overflow-hidden border-x border-gray-100 dark:border-gray-800/50">
 
-                {/* Header Section */}
-                <header className="flex-shrink-0 pt-10 pb-4 px-6 flex items-center justify-between sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+                {/* Header Section - Premium Glassmorphism */}
+                <header className="flex-shrink-0 pt-12 pb-5 px-6 flex items-center justify-between sticky top-0 z-30 bg-white/95 dark:bg-[#020412]/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800/50">
                     <div className="flex items-center gap-3">
                         <div
                             onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)}
@@ -116,49 +116,55 @@ const Dashboard: React.FC = () => {
 
                 {/* Main Scrollable Content */}
                 <main className="flex-1 overflow-y-auto px-5 pt-6 space-y-6 pb-32 no-scrollbar">
-                    {/* Performance Section */}
+                    {/* Performance Section - High Contrast Cards */}
                     <section>
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-lg font-semibold">Performance</h2>
-                            <span className="text-xs font-medium text-primary cursor-pointer">Live Stats</span>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Performance</h2>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">LIVE STATS</span>
                         </div>
                         <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 snap-x snap-mandatory">
-                            <div className="snap-center shrink-0 w-[155px] p-4 rounded-xl bg-white dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
-                                <div className="flex items-start justify-between mb-2">
-                                    <div className="p-1.5 rounded-lg bg-primary/10 dark:bg-primary/20">
-                                        <TrendingUp className="text-primary w-4 h-4" />
+                            {/* Efficiency Card */}
+                            <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-2 rounded-xl bg-primary/10 dark:bg-primary/20">
+                                        <TrendingUp className="text-primary w-5 h-5" />
                                     </div>
-                                    <span className="text-xs font-bold text-accent-success flex items-center">
-                                        +5% <ArrowUp size={12} className="ml-1" />
+                                    <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                                        +5% <ArrowUp size={10} className="ml-0.5" />
                                     </span>
                                 </div>
-                                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-tight">Efficiency</p>
-                                <p className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">84%</p>
+                                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Efficiency</p>
+                                <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">84%</p>
                             </div>
-                            <div className="snap-center shrink-0 w-[155px] p-4 rounded-xl bg-white dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
-                                <div className="flex items-start justify-between mb-2">
-                                    <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
-                                        <Users className="text-orange-500 w-4 h-4" />
+
+                            {/* Active Tasks Card */}
+                            <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-orange-500/30">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-500/20">
+                                        <Users className="text-orange-500 w-5 h-5" />
                                     </div>
-                                    <span className="text-xs font-bold text-accent-success flex items-center">
-                                        +2 <ArrowUp size={12} className="ml-1" />
+                                    <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                                        NEW <ArrowUp size={10} className="ml-0.5" />
                                     </span>
                                 </div>
-                                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-tight">Active Tasks</p>
-                                <p className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{tasks?.length || 0}</p>
+                                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Active Tasks</p>
+                                <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{tasks?.length || 0}</p>
                             </div>
                         </div>
                     </section>
 
-                    {/* Chart Section */}
-                    <section className="bg-white dark:bg-card-dark p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-base font-semibold">Activity Flow</h3>
-                            <button className="p-1 rounded bg-gray-50 dark:bg-gray-800 text-gray-400">
-                                <MoreHorizontal size={16} />
+                    {/* Chart Section - Premium Box */}
+                    <section className="bg-white dark:bg-[#0f1325] p-6 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity Flow</h3>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Revenue Insights</p>
+                            </div>
+                            <button className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
+                                <MoreHorizontal size={20} />
                             </button>
                         </div>
-                        <div className="h-[160px] w-full relative">
+                        <div className="h-[180px] w-full relative">
                             <DashboardChart />
                         </div>
                     </section>
@@ -171,29 +177,35 @@ const Dashboard: React.FC = () => {
                         </div>
                     </section>
 
-                    {/* Urgent Tasks Section */}
+                    {/* Urgent Tasks Section - High Visibility */}
                     {urgentTasks.length > 0 && (
-                        <section className="pb-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold">Urgent Tasks</h2>
-                                <button className="text-primary text-xs font-semibold hover:underline">Priority Focus</button>
+                        <section className="pb-8">
+                            <div className="flex items-center justify-between mb-5">
+                                <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Urgent Tasks</h2>
+                                <button className="text-primary text-[10px] font-black uppercase tracking-widest bg-primary/5 px-2 py-1 rounded-md">View All</button>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {urgentTasks.map((task) => (
-                                    <div key={task.id} className="flex items-center p-3 rounded-xl bg-white dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
-                                        <div className="flex-shrink-0 mr-3">
-                                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center text-red-500">
-                                                <AlertCircle size={18} />
+                                    <div key={task.id} className="group flex items-center p-4 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+                                        <div className="flex-shrink-0 mr-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center text-red-500 shadow-inner">
+                                                <AlertCircle size={22} strokeWidth={2.5} />
                                             </div>
                                         </div>
-                                        <div className="flex-grow">
-                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{task.title}</h4>
-                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px] mt-0.5">
-                                                {task.status.toUpperCase()} • {task.priority.toUpperCase()}
-                                            </p>
+                                        <div className="flex-grow min-w-0">
+                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">{task.title}</h4>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+                                                    {task.status || 'NEW'}
+                                                </span>
+                                                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                                <span className="text-[10px] font-black text-red-500 uppercase tracking-tighter bg-red-500/5 px-1.5 rounded">
+                                                    URGENT
+                                                </span>
+                                            </div>
                                         </div>
-                                        <button className="w-8 h-8 rounded-full border border-gray-100 dark:border-gray-800 flex items-center justify-center hover:bg-primary hover:border-primary group transition-colors flex-shrink-0">
-                                            <Check size={16} className="text-gray-400 group-hover:text-white" />
+                                        <button className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-primary hover:border-primary group transition-all flex-shrink-0 shadow-sm bg-slate-50 dark:bg-slate-900/50">
+                                            <Check size={18} strokeWidth={3} className="text-slate-400 group-hover:text-white" />
                                         </button>
                                     </div>
                                 ))}
