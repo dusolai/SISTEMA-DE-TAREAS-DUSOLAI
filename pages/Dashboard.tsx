@@ -79,10 +79,10 @@ const Dashboard: React.FC = () => {
     return (
         <div className="bg-background-light dark:bg-background-dark font-sans text-gray-900 dark:text-white transition-colors duration-200 antialiased h-screen overflow-hidden flex flex-col">
             {/* Mobile Layout Wrapper */}
-            <div className="max-w-md mx-auto w-full h-full relative flex flex-col bg-white dark:bg-background-dark shadow-2xl overflow-hidden">
+            <div className="max-w-md mx-auto w-full h-full relative flex flex-col bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden">
 
                 {/* Header Section */}
-                <header className="flex-shrink-0 pt-10 pb-4 px-6 flex items-center justify-between sticky top-0 z-20 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+                <header className="flex-shrink-0 pt-10 pb-4 px-6 flex items-center justify-between sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-3">
                         <div
                             onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)}
@@ -123,7 +123,7 @@ const Dashboard: React.FC = () => {
                             <span className="text-xs font-medium text-primary cursor-pointer">Live Stats</span>
                         </div>
                         <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 snap-x snap-mandatory">
-                            <div className="snap-center shrink-0 w-[165px] p-4 rounded-xl bg-white dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
+                            <div className="snap-center shrink-0 w-[155px] p-4 rounded-xl bg-white dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
                                 <div className="flex items-start justify-between mb-2">
                                     <div className="p-1.5 rounded-lg bg-primary/10 dark:bg-primary/20">
                                         <TrendingUp className="text-primary w-4 h-4" />
@@ -132,10 +132,10 @@ const Dashboard: React.FC = () => {
                                         +5% <ArrowUp size={12} className="ml-1" />
                                     </span>
                                 </div>
-                                <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1">Efficiency</p>
-                                <p className="text-2xl font-bold tracking-tight">84%</p>
+                                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-tight">Efficiency</p>
+                                <p className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">84%</p>
                             </div>
-                            <div className="snap-center shrink-0 w-[165px] p-4 rounded-xl bg-white dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
+                            <div className="snap-center shrink-0 w-[155px] p-4 rounded-xl bg-white dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
                                 <div className="flex items-start justify-between mb-2">
                                     <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
                                         <Users className="text-orange-500 w-4 h-4" />
@@ -144,8 +144,8 @@ const Dashboard: React.FC = () => {
                                         +2 <ArrowUp size={12} className="ml-1" />
                                     </span>
                                 </div>
-                                <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1">Active Tasks</p>
-                                <p className="text-2xl font-bold tracking-tight">{tasks?.length || 0}</p>
+                                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-tight">Active Tasks</p>
+                                <p className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{tasks?.length || 0}</p>
                             </div>
                         </div>
                     </section>
@@ -187,12 +187,12 @@ const Dashboard: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className="flex-grow">
-                                            <h4 className="text-sm font-medium">{task.title}</h4>
-                                            <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate max-w-[180px]">
-                                                {task.status} • {task.priority}
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{task.title}</h4>
+                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px] mt-0.5">
+                                                {task.status.toUpperCase()} • {task.priority.toUpperCase()}
                                             </p>
                                         </div>
-                                        <button className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-primary hover:border-primary group transition-colors">
+                                        <button className="w-8 h-8 rounded-full border border-gray-100 dark:border-gray-800 flex items-center justify-center hover:bg-primary hover:border-primary group transition-colors flex-shrink-0">
                                             <Check size={16} className="text-gray-400 group-hover:text-white" />
                                         </button>
                                     </div>
@@ -203,7 +203,7 @@ const Dashboard: React.FC = () => {
                 </main>
 
                 {/* Bottom Navigation (Floating style from code.html) */}
-                <nav className="absolute bottom-0 w-full bg-white/95 dark:bg-card-dark/95 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 pb-8 pt-3 px-6 z-30">
+                <nav className="absolute bottom-0 w-full bg-background-light/95 dark:bg-card-dark/95 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 pb-8 pt-3 px-6 z-30">
                     <ul className="flex justify-between items-center">
                         <li>
                             <button className="flex flex-col items-center gap-1 text-primary">
@@ -247,8 +247,8 @@ const Dashboard: React.FC = () => {
                 </nav>
 
                 {/* Audio Recorder Drawer Overlay */}
-                <div className={`fixed inset-x-0 bottom-0 max-w-md mx-auto bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 shadow-2xl transition-all duration-300 z-40 overflow-hidden ${isAudioDrawerOpen ? 'h-[400px]' : 'h-0'}`}>
-                    <div className="flex flex-col h-full bg-white dark:bg-background-dark">
+                <div className={`fixed inset-x-0 bottom-0 max-w-md mx-auto bg-background-light dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 shadow-2xl transition-all duration-300 z-40 overflow-hidden ${isAudioDrawerOpen ? 'h-[400px]' : 'h-0'}`}>
+                    <div className="flex flex-col h-full bg-background-light dark:bg-background-dark">
                         <div
                             onClick={() => setIsAudioDrawerOpen(false)}
                             className="h-10 flex items-center justify-center cursor-pointer border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
