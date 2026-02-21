@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CRM Strategy Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#5848e8", // Vibrant Purple from reference
+                        "primary-hover": "#4538c2",
+                        "background-light": "#f3f4f6", // Light gray for light mode fallback
+                        "background-dark": "#020412", // Deep navy/black from reference
+                        "card-dark": "#0f1325", // Slightly lighter navy for cards
+                        "card-light": "#ffffff",
+                        "text-secondary-dark": "#94a3b8",
+                        "text-secondary-light": "#64748b",
+                        "accent-success": "#10b981",
+                        "accent-warning": "#f59e0b",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                        "xl": "16px",
+                        "2xl": "20px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }.chart-container {
+            position: relative;
+            height: 160px;
+            width: 100%;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white transition-colors duration-200 antialiased h-full">
+<div class="max-w-md mx-auto min-h-screen relative pb-20 overflow-hidden">
+<header class="pt-12 pb-4 px-6 flex items-center justify-between sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+<span class="material-icons text-white text-xl">mic</span>
+</div>
+<div>
+<h1 class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">Dusolai CRM</h1>
+<p class="text-lg font-bold leading-none">Strategy Board</p>
+</div>
+</div>
+<button class="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons text-gray-600 dark:text-gray-300">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background-light dark:border-background-dark"></span>
+</button>
+</header>
+<main class="px-5 pt-6 space-y-6">
+<section>
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-lg font-semibold">Performance</h2>
+<span class="text-xs font-medium text-primary cursor-pointer">This Month</span>
+</div>
+<div class="flex overflow-x-auto gap-4 no-scrollbar pb-2 snap-x snap-mandatory">
+<div class="snap-center shrink-0 w-[160px] p-4 rounded-xl bg-card-light dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
+<div class="flex items-start justify-between mb-2">
+<div class="p-1.5 rounded-lg bg-primary/10 dark:bg-primary/20">
+<span class="material-icons text-primary text-lg">attach_money</span>
+</div>
+<span class="text-xs font-bold text-accent-success flex items-center">
+                                +12% <span class="material-icons text-[14px]">arrow_upward</span>
+</span>
+</div>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1">Total Revenue</p>
+<p class="text-2xl font-bold tracking-tight">$42.5k</p>
+</div>
+<div class="snap-center shrink-0 w-[160px] p-4 rounded-xl bg-card-light dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
+<div class="flex items-start justify-between mb-2">
+<div class="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
+<span class="material-icons text-orange-500 text-lg">people</span>
+</div>
+<span class="text-xs font-bold text-accent-success flex items-center">
+                                +5% <span class="material-icons text-[14px]">arrow_upward</span>
+</span>
+</div>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1">Active Leads</p>
+<p class="text-2xl font-bold tracking-tight">184</p>
+</div>
+<div class="snap-center shrink-0 w-[160px] p-4 rounded-xl bg-card-light dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
+<div class="flex items-start justify-between mb-2">
+<div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/20">
+<span class="material-icons text-blue-500 text-lg">show_chart</span>
+</div>
+<span class="text-xs font-bold text-red-400 flex items-center">
+                                -2% <span class="material-icons text-[14px]">arrow_downward</span>
+</span>
+</div>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1">Conv. Rate</p>
+<p class="text-2xl font-bold tracking-tight">3.2%</p>
+</div>
+</div>
+</section>
+<section class="bg-card-light dark:bg-card-dark p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-base font-semibold">Revenue Growth</h3>
+<button class="p-1 rounded bg-gray-100 dark:bg-gray-800">
+<span class="material-icons text-sm text-gray-500">more_horiz</span>
+</button>
+</div>
+<div class="chart-container">
+<canvas id="revenueChart"></canvas>
+</div>
+</section>
+<section>
+<h2 class="text-lg font-semibold mb-4">Sales Pipeline</h2>
+<div class="space-y-4">
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-xl"></div>
+<div class="flex justify-between items-end mb-2">
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold text-blue-500">Discovery</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/10 text-blue-500 font-medium">12 Deals</span>
+</div>
+<span class="text-sm font-bold">$124,000</span>
+</div>
+<div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mb-1">
+<div class="bg-blue-500 h-1.5 rounded-full" style="width: 65%"></div>
+</div>
+<div class="flex justify-between mt-2">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-card-light dark:border-card-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtwLZceFbiqbZdw-e6oL5is-DQ7Q5agCs7uHqRfBCD2r7xbLdToGjaQaaMwdSaf6dZKJVr1fC1F3ch0I_Ru8BjudhQK6GRC7qQO4WIPg5tm5ZbFGZ5CghQFGQxXpUtbDsVjh1T1GJMqWyPtCL65lWsk9FM7jeeXafqKiX1MxK4UVFJcBNoUOWHxAnmR9ZdzoRYWUzPj6p25eTvWfXghPos9lX-faxz5d7vDF_4Bi0hYlNKd7Fg1IHknLywcl-LKROFK4gvM6aNQu0"/>
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-card-light dark:border-card-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArT4Eec30vEe__AYK-HExkcmaWcfnqnwpwPwqZqzL3aneoMkl6sn1VdhEUkeG1AVcjONwKue2Iq2fwLcrXjsgxpOjNJNJQ31nsJPX7ZrJD5m0-wehF72vH2fRMNYot_w5fX72HE4RTGIpZa0O5qUnuT9MptJL1IOlTG07F4E59ITdXWqH9FDy3O_2qlcs2N0gkHlVZfFlN-jELd5bbWmhIiAYIatEuy2wz20ekITtlCD306HZ64_4ndxpusQSH5yEnd27sFXN7ywk"/>
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-card-light dark:border-card-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDY9Vxu9IFAEL3zIxbbEopDkKl7JOYCCI9BMjrZhSlrAUGbj8jE7Jk11H--TJnOw1osiAuPWqtxfTWv3Wcjjamp2lBjrCUbYdnUrrZM8zeqt82B9uqVyK0YWfVCVQEkxiMe6veOqGzPinxaLr26tU-cn1y-rNSVzZdb55_72tsGtntBO1ZmUz-pASPPCVSwF-G1SaFi_kPRK5FvF4buyptFicaqZdIwptMP66ZXGh9otkKqavyRnubHh9p8roWAmLcbPDCplOnD6fs"/>
+<div class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] flex items-center justify-center border-2 border-card-light dark:border-card-dark text-gray-500">+4</div>
+</div>
+<span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">High Potential</span>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl"></div>
+<div class="flex justify-between items-end mb-2">
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold text-primary">Proposal</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-medium">8 Deals</span>
+</div>
+<span class="text-sm font-bold">$86,500</span>
+</div>
+<div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mb-1">
+<div class="bg-primary h-1.5 rounded-full" style="width: 40%"></div>
+</div>
+<div class="flex justify-between mt-2">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-card-light dark:border-card-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1Id0UCwf8NmwvWJZ3TNshYgRgNI3JzAz8W7EZxwlt9CCjd5GIgTjLN7IACjbzSJwI37nRlgyNfzWT6EqIaldvb5KIoVeD3cdYBdd67La1i8m3hWtuLsH8hJRcJuPmy9mKgddypPJ8IAVCAsBf3UIfpDsSRQ-uMsMw9MVvF3Zex48nkAFJYBWAGUe0Kk2b4RslJ894_FFgewytrpteCZnxgr2CBF82bliE4vKy6IcAJZ8d8ipwer6FRrclUcTrbNkQ7YGFmLFC6JY"/>
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-card-light dark:border-card-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyOK4W5bQmf37oUFXe09fbzOaTPnFi46iV1YdW9NVNIwLcoVAmNJ6KMXDWH85A-tSckanLkE__RFabdiUG_ecMZpfj6asyV1keRjNDAyuyX5T3W5vh_mk1l5nQw6WGsxeLJJol-gW18V-epCG66JcH590SoAfBSD-KKPM3q55YMTPpvWt94-TIkDh9em_e9WhSRdbzM9omI73t8tyPD760zVtGxhRE0bu9NRg5xxaoQHw4Pzm9XDY5LKoToIv-2N-TMfc4QIdWJVY"/>
+</div>
+<span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Awaiting Review</span>
+</div>
+</div>
+</div>
+</section>
+<section class="pb-6">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-semibold">Urgent Tasks</h2>
+<button class="text-primary text-xs font-semibold">View All</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center p-3 rounded-xl bg-card-light dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
+<div class="flex-shrink-0 mr-3">
+<div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center">
+<span class="material-icons text-red-500 text-lg">priority_high</span>
+</div>
+</div>
+<div class="flex-grow">
+<h4 class="text-sm font-medium">Review Q3 Contract</h4>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">TechFlow Inc. • Due Today</p>
+</div>
+<button class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-primary hover:border-primary group transition-colors">
+<span class="material-icons text-gray-400 group-hover:text-white text-lg">check</span>
+</button>
+</div>
+<div class="flex items-center p-3 rounded-xl bg-card-light dark:bg-card-dark border border-gray-100 dark:border-gray-800 shadow-sm">
+<div class="flex-shrink-0 mr-3">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-icons text-primary text-lg">phone_in_talk</span>
+</div>
+</div>
+<div class="flex-grow">
+<h4 class="text-sm font-medium">Follow up with Sarah</h4>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Design Corp • Due Tomorrow</p>
+</div>
+<button class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-primary hover:border-primary group transition-colors">
+<span class="material-icons text-gray-400 group-hover:text-white text-lg">check</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 w-full max-w-md bg-card-light/95 dark:bg-card-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 pb-6 pt-3 px-6 z-30">
+<ul class="flex justify-between items-center">
+<li>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-icons">dashboard</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary transition-colors" href="#">
+<span class="material-icons">pie_chart</span>
+<span class="text-[10px] font-medium">Stats</span>
+</a>
+</li>
+<li>
+<div class="relative -top-5">
+<button class="w-14 h-14 rounded-full bg-primary shadow-lg shadow-primary/40 flex items-center justify-center hover:bg-primary-hover transition-colors">
+<span class="material-icons text-white text-2xl">add</span>
+</button>
+</div>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary transition-colors" href="#">
+<span class="material-icons">folder_open</span>
+<span class="text-[10px] font-medium">Projects</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary transition-colors" href="#">
+<span class="material-icons">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+<script>
+        // Check for dark mode preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        // Initialize Chart.js
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        // Gradient for the chart
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(88, 72, 232, 0.5)'); // Primary color with opacity
+        gradient.addColorStop(1, 'rgba(88, 72, 232, 0.0)');
+        const revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Revenue',
+                    data: [1200, 1900, 1700, 2400, 2100, 2800, 3200],
+                    borderColor: '#5848e8', // Primary Color
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#5848e8',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#0f1325',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#1e293b',
+                        borderWidth: 1,
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    y: {
+                        display: false, // Hide Y axis for cleaner look
+                        grid: {
+                            display: false
+                        },
+                        min: 0
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    </script>
+
+</body></html>

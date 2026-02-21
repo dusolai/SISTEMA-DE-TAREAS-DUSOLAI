@@ -26,12 +26,12 @@ const AuthPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-950 p-4">
       <div className="w-full max-w-md mx-auto bg-gray-900 rounded-2xl shadow-2xl p-8 space-y-8">
         <div className="text-center">
-            <div className="flex justify-center items-center mb-4">
-                <div className="p-3 bg-indigo-600 rounded-full">
-                    <Mic className="w-8 h-8 text-white"/>
-                </div>
+          <div className="flex justify-center items-center mb-4">
+            <div className="p-3 bg-indigo-600 rounded-full">
+              <Mic className="w-8 h-8 text-white" />
             </div>
-          <h1 className="text-4xl font-bold text-white">DUSOLAI</h1>
+          </div>
+          <h1 className="text-4xl font-bold text-white uppercase">DUALINK</h1>
           <p className="text-gray-400 mt-2">Your Audio-First Task Manager</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-6">
