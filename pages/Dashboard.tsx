@@ -347,7 +347,7 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <button className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors"><MoreHorizontal size={20} /></button>
                             </div>
-                            <div className="h-[180px] w-full relative"><DashboardChart /></div>
+                            <div className="h-[180px] w-full relative"><DashboardChart tasks={tasks} /></div>
                         </section>
 
                         {/* Kanban */}

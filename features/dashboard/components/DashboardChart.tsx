@@ -23,7 +23,13 @@ ChartJS.register(
     Legend
 );
 
-const DashboardChart: React.FC = () => {
+import { Task } from '../../../types';
+
+interface Props {
+    tasks: Task[];
+}
+
+const DashboardChart: React.FC<Props> = ({ tasks }) => {
     const options = {
         responsive: true,
         maintainAspectRatio: false,
@@ -42,6 +48,9 @@ const DashboardChart: React.FC = () => {
                 padding: 10,
                 cornerRadius: 8,
                 displayColors: false,
+                callbacks: {
+                    label: (context: any) => `Tareas: ${context.parsed.y}`
+                }
             },
         },
         scales: {
@@ -62,6 +71,9 @@ const DashboardChart: React.FC = () => {
                     display: false,
                 },
                 min: 0,
+                ticks: {
+                    stepSize: 1
+                }
             },
         },
         interaction: {
@@ -71,34 +83,63 @@ const DashboardChart: React.FC = () => {
         },
     };
 
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+    // Calcular tareas creadas por día de la semana actual
+    const getCreationCounts = () => {
+        const counts = [0, 0, 0, 0, 0, 0, 0];
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        const day = now.getDay(); // 0 (Sun) to 6 (Sat)
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+        startOfWeek.setDate(diff);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        tasks.forEach(task => {
+            const createdDate = new Date(task.created_at);
+            if (createdDate >= startOfWeek) {
+                const dayIndex = (createdDate.getDay() + 6) % 7; // Convert 0-6 (Sun-Sat) to 0-6 (Mon-Sun)
+                if (dayIndex >= 0 && dayIndex < 7) {
+                    counts[dayIndex]++;
+                }
+            }
+        });
+        return counts;
+    };
 
     const data = {
         labels,
         datasets: [
             {
                 fill: true,
-                label: 'Revenue',
-                data: [1200, 1900, 1700, 2400, 2100, 2800, 3200],
+                label: 'Tareas Creadas',
+                data: getCreationCounts(),
                 borderColor: '#5848e8',
                 backgroundColor: (context: any) => {
                     const ctx = context.chart.ctx;
                     const gradient = ctx.createLinearGradient(0, 0, 0, 160);
-                    gradient.addColorStop(0, 'rgba(88, 72, 232, 0.5)');
+                    gradient.addColorStop(0, 'rgba(88, 72, 232, 0.4)');
                     gradient.addColorStop(1, 'rgba(88, 72, 232, 0.0)');
                     return gradient;
                 },
-                borderWidth: 2,
+                borderWidth: 3,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: '#5848e8',
-                pointRadius: 4,
+                pointRadius: 0,
                 pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#5848e8',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
                 tension: 0.4,
             },
         ],
     };
 
-    return <Line options={options} data={data} />;
+    return (
+        <div style={{ height: '100%', width: '100%' }}>
+            <Line options={options} data={data} />
+        </div>
+    );
 };
 
 export default DashboardChart;
