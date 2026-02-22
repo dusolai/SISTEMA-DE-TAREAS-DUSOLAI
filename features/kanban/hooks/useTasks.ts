@@ -63,7 +63,6 @@ const useTasks = create<TasksState>((set, get) => ({
 
         const taskToInsert = {
             ...newTaskData,
-            user_id: user.id,
             created_by: user.id,
             history: initialHistory,
             updated_at: new Date().toISOString(),
