@@ -229,7 +229,7 @@ const Dashboard: React.FC = () => {
                                         {/* Chart */}
                                         <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
                                             <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: '0 0 12px 0' }}>Activity Flow</h3>
-                                            <div style={{ height: 140, width: '100%' }}><DashboardChart /></div>
+                                            <div style={{ height: 140, width: '100%' }}><DashboardChart tasks={tasks} /></div>
                                         </div>
 
                                         {/* Urgent Tasks */}

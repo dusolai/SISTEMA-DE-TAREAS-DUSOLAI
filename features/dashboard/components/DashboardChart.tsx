@@ -88,6 +88,8 @@ const DashboardChart: React.FC<Props> = ({ tasks }) => {
     // Calcular tareas creadas por día de la semana actual
     const getCreationCounts = () => {
         const counts = [0, 0, 0, 0, 0, 0, 0];
+        if (!tasks || !Array.isArray(tasks)) return counts;
+
         const now = new Date();
         const startOfWeek = new Date(now);
         const day = now.getDay(); // 0 (Sun) to 6 (Sat)
@@ -96,6 +98,7 @@ const DashboardChart: React.FC<Props> = ({ tasks }) => {
         startOfWeek.setHours(0, 0, 0, 0);
 
         tasks.forEach(task => {
+            if (!task.created_at) return;
             const createdDate = new Date(task.created_at);
             if (createdDate >= startOfWeek) {
                 const dayIndex = (createdDate.getDay() + 6) % 7; // Convert 0-6 (Sun-Sat) to 0-6 (Mon-Sun)
@@ -116,10 +119,12 @@ const DashboardChart: React.FC<Props> = ({ tasks }) => {
                 data: getCreationCounts(),
                 borderColor: '#5848e8',
                 backgroundColor: (context: any) => {
-                    const ctx = context.chart.ctx;
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 160);
-                    gradient.addColorStop(0, 'rgba(88, 72, 232, 0.4)');
-                    gradient.addColorStop(1, 'rgba(88, 72, 232, 0.0)');
+                    const chart = context.chart;
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return null;
+                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                    gradient.addColorStop(0, 'rgba(88, 72, 232, 0.0)');
+                    gradient.addColorStop(1, 'rgba(88, 72, 232, 0.4)');
                     return gradient;
                 },
                 borderWidth: 3,
