@@ -54,8 +54,12 @@ const TaskModal: React.FC = () => {
         };
 
         if (taskModalData) {
-            await updateTask(taskModalData.id, taskData);
-            closeTaskModal();
+            const success = await updateTask(taskModalData.id, taskData);
+            if (success) {
+                closeTaskModal();
+            } else {
+                alert('Error al guardar los cambios. Revisa la consola para más detalles.');
+            }
         } else {
             const success = await createTask({
                 ...taskData,

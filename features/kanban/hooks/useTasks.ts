@@ -8,7 +8,7 @@ interface TasksState {
     isLoading: boolean;
     fetchTasks: (workspaceId: string) => Promise<void>;
     createTask: (task: Omit<Task, 'id' | 'created_at' | 'history' | 'updated_at'>) => Promise<boolean>;
-    updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+    updateTask: (id: string, updates: Partial<Task>) => Promise<boolean>;
     deleteTask: (id: string) => Promise<void>;
     scheduleTask: (id: string, scheduledAt: string | null) => Promise<void>;
 }
@@ -27,19 +27,21 @@ const useTasks = create<TasksState>((set, get) => ({
 
     fetchTasks: async (workspaceId) => {
         set({ isLoading: true });
-        const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
-            .eq('workspace_id', workspaceId)
-            .order('order', { ascending: true }); // Orden correcto
+        try {
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('workspace_id', workspaceId)
+                .order('order', { ascending: true });
 
-        if (error) {
+            if (error) throw error;
+            set({ tasks: data || [] });
+        } catch (error) {
             console.error('Error fetching tasks:', error);
             set({ tasks: [] });
-        } else {
-            set({ tasks: data || [] });
+        } finally {
+            set({ isLoading: false });
         }
-        set({ isLoading: false });
     },
 
     createTask: async (newTaskData) => {
@@ -48,6 +50,8 @@ const useTasks = create<TasksState>((set, get) => ({
             console.error('No user session found during task creation');
             return false;
         }
+
+        console.log('Attempting to create task with data:', newTaskData);
 
         const initialHistory: HistoryEvent[] = [{
             id: crypto.randomUUID(),
@@ -66,13 +70,18 @@ const useTasks = create<TasksState>((set, get) => ({
             progress: 0
         };
 
-        const { data, error } = await supabase.from('tasks').insert([taskToInsert]).select().single();
-        if (error) {
-            console.error('Error creating task in Supabase:', error);
-            return false;
-        } else {
+        try {
+            const { data, error } = await supabase.from('tasks').insert([taskToInsert]).select().single();
+            if (error) {
+                console.error('Supabase error during createTask:', error);
+                return false;
+            }
+            console.log('Task created successfully:', data);
             set((state) => ({ tasks: [...state.tasks, data] }));
             return true;
+        } catch (e) {
+            console.error('Unexpected error in createTask:', e);
+            return false;
         }
     },
 
@@ -80,7 +89,12 @@ const useTasks = create<TasksState>((set, get) => ({
         const currentTasks = get().tasks;
         const oldTask = currentTasks.find(t => t.id === id);
         const user = useAuthStore.getState().session?.user;
-        if (!oldTask) return;
+        if (!oldTask) {
+            console.error('Task not found for update:', id);
+            return false;
+        }
+
+        console.log(`Attempting to update task ${id} with updates:`, updates);
 
         let updatedHistory = oldTask.history || [];
         if (!updates.order && !updates.progress) {
@@ -95,9 +109,23 @@ const useTasks = create<TasksState>((set, get) => ({
         }
 
         const finalUpdates = { ...updates, history: updatedHistory, updated_at: new Date().toISOString() };
-        set((state) => ({ tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...finalUpdates } : t)) }));
 
-        await supabase.from('tasks').update(finalUpdates).eq('id', id);
+        try {
+            const { error } = await supabase.from('tasks').update(finalUpdates).eq('id', id);
+            if (error) {
+                console.error('Supabase error during updateTask:', error);
+                return false;
+            }
+
+            set((state) => ({
+                tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...finalUpdates } : t))
+            }));
+            console.log('Task updated successfully');
+            return true;
+        } catch (e) {
+            console.error('Unexpected error in updateTask:', e);
+            return false;
+        }
     },
 
     deleteTask: async (id) => {
