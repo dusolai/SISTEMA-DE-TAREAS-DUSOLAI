@@ -14,6 +14,8 @@ const TaskModal: React.FC = () => {
     const [description, setDescription] = useState('');
     const [status, setStatus] = useState<Task['status']>('todo');
     const [priority, setPriority] = useState<Task['priority']>('medium');
+    const [notionUrl, setNotionUrl] = useState('');
+    const [driveUrl, setDriveUrl] = useState('');
     const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
 
     useEffect(() => {
@@ -22,12 +24,16 @@ const TaskModal: React.FC = () => {
             setDescription(taskModalData.description || '');
             setStatus(taskModalData.status || 'todo');
             setPriority(taskModalData.priority || 'medium');
+            setNotionUrl(taskModalData.notion_url || '');
+            setDriveUrl(taskModalData.drive_url || '');
             setActiveTab('details');
         } else {
             setTitle('');
             setDescription('');
             setStatus('todo');
             setPriority('medium');
+            setNotionUrl('');
+            setDriveUrl('');
             setActiveTab('details');
         }
     }, [taskModalData, isTaskModalOpen]);
@@ -38,11 +44,20 @@ const TaskModal: React.FC = () => {
         e.preventDefault();
         if (!title.trim() || !currentWorkspaceId) return;
 
+        const taskData = {
+            title,
+            description,
+            status,
+            priority,
+            notion_url: notionUrl || null,
+            drive_url: driveUrl || null
+        };
+
         if (taskModalData) {
-            await updateTask(taskModalData.id, { title, description, status, priority });
+            await updateTask(taskModalData.id, taskData);
         } else {
             await createTask({
-                title, description, status, priority,
+                ...taskData,
                 workspace_id: currentWorkspaceId,
                 order: 0, progress: 0, project_id: null, assigned_to: null, history: []
             } as any);
@@ -67,8 +82,8 @@ const TaskModal: React.FC = () => {
 
                 {taskModalData && (
                     <div className="flex border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-                        <button onClick={() => setActiveTab('details')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'details' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><FileText size={16} className="inline mr-2"/>Detalles</button>
-                        <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'history' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><Activity size={16} className="inline mr-2"/>Historial</button>
+                        <button onClick={() => setActiveTab('details')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'details' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><FileText size={16} className="inline mr-2" />Detalles</button>
+                        <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'history' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><Activity size={16} className="inline mr-2" />Historial</button>
                     </div>
                 )}
 
@@ -81,6 +96,28 @@ const TaskModal: React.FC = () => {
                                 <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label><select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"><option value="low">Baja</option><option value="medium">Media</option><option value="high">Alta</option></select></div>
                             </div>
                             <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label><textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white" /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Enlace Notion</label>
+                                    <input
+                                        type="url"
+                                        value={notionUrl}
+                                        onChange={e => setNotionUrl(e.target.value)}
+                                        placeholder="https://notion.so/..."
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Enlace Google Drive</label>
+                                    <input
+                                        type="url"
+                                        value={driveUrl}
+                                        onChange={e => setDriveUrl(e.target.value)}
+                                        placeholder="https://drive.google.com/..."
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                                    />
+                                </div>
+                            </div>
                         </form>
                     ) : (
                         <div className="space-y-4">

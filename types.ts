@@ -31,10 +31,12 @@ export interface Task {
     transcription?: string;
     ai_extracted?: AiExtractedData;
 
-    // --- NUEVOS CAMPOS PARA HISTORIAL ---
+    // --- NUEVOS CAMPOS PARA SEGUIMIENTO ---
     updated_at?: string;
     history?: HistoryEvent[];
     scheduled_at?: string | null;
+    notion_url?: string | null;
+    drive_url?: string | null;
 }
 
 export interface Subtask {
