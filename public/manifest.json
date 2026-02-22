@@ -5,19 +5,19 @@
     "icons": [
         {
             "src": "/icon-192.png",
-            "type": "image/jpeg",
+            "type": "image/png",
             "sizes": "192x192",
             "purpose": "any"
         },
         {
             "src": "/icon-192.png",
-            "type": "image/jpeg",
+            "type": "image/png",
             "sizes": "192x192",
             "purpose": "maskable"
         },
         {
             "src": "/icon-512.png",
-            "type": "image/jpeg",
+            "type": "image/png",
             "sizes": "512x512",
             "purpose": "any"
         }
@@ -26,21 +26,21 @@
         {
             "src": "/screenshot1.png",
             "sizes": "1080x1920",
-            "type": "image/jpeg",
+            "type": "image/png",
             "form_factor": "narrow",
             "label": "Pantalla de Autenticación"
         },
         {
             "src": "/screenshot2.png",
             "sizes": "1080x1920",
-            "type": "image/jpeg",
+            "type": "image/png",
             "form_factor": "narrow",
             "label": "Dashboard Principal"
         },
         {
             "src": "/screenshot3.png",
             "sizes": "1080x1920",
-            "type": "image/jpeg",
+            "type": "image/png",
             "form_factor": "narrow",
             "label": "Vista de Calendario"
         }
