@@ -98,7 +98,7 @@ const Dashboard: React.FC = () => {
                             >
                                 {isLoadingWS ? <option>Cargando...</option> : workspaces?.map(ws => <option key={ws.id} value={ws.id} className="bg-white dark:bg-gray-950">{ws.name}</option>)}
                             </select>
-                            <p className="text-lg font-bold leading-none">Dualink Tasks</p>
+                            <p className="text-lg font-bold leading-none">Dualink Tasks <span className="text-[8px] font-normal text-slate-400">v2.1-LIVE</span></p>
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
