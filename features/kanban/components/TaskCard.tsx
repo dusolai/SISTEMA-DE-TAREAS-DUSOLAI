@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { Clock, GripVertical, CheckCircle2, Github } from 'lucide-react';
+import { Clock, GripVertical, CheckCircle2 } from 'lucide-react';
 import { Task } from '../../../types';
 import { useUIStore } from '../../../store/uiStore';
 
@@ -93,18 +93,6 @@ const TaskCard: React.FC<Props> = ({ task }) => {
                                     <path d="M20 7L13 2H5L12 14L20 7Z" />
                                     <path d="M2 22L9 10L2 2L2 22Z" />
                                 </svg>
-                            </a>
-                        )}
-                        {task.github_url && (
-                            <a
-                                href={task.github_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                                title="Abrir en GitHub"
-                            >
-                                <Github size={14} />
                             </a>
                         )}
                     </div>

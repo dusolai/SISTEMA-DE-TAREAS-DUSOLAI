@@ -16,7 +16,6 @@ const TaskModal: React.FC = () => {
     const [priority, setPriority] = useState<Task['priority']>('medium');
     const [notionUrl, setNotionUrl] = useState('');
     const [driveUrl, setDriveUrl] = useState('');
-    const [githubUrl, setGithubUrl] = useState('');
     const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
 
     useEffect(() => {
@@ -27,7 +26,6 @@ const TaskModal: React.FC = () => {
             setPriority(taskModalData.priority || 'medium');
             setNotionUrl(taskModalData.notion_url || '');
             setDriveUrl(taskModalData.drive_url || '');
-            setGithubUrl(taskModalData.github_url || '');
             setActiveTab('details');
         } else {
             setTitle('');
@@ -36,7 +34,6 @@ const TaskModal: React.FC = () => {
             setPriority('medium');
             setNotionUrl('');
             setDriveUrl('');
-            setGithubUrl('');
             setActiveTab('details');
         }
     }, [taskModalData, isTaskModalOpen]);
@@ -53,8 +50,7 @@ const TaskModal: React.FC = () => {
             status,
             priority,
             notion_url: notionUrl || null,
-            drive_url: driveUrl || null,
-            github_url: githubUrl || null
+            drive_url: driveUrl || null
         };
 
         if (taskModalData) {
@@ -100,7 +96,7 @@ const TaskModal: React.FC = () => {
                                 <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label><select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"><option value="low">Baja</option><option value="medium">Media</option><option value="high">Alta</option></select></div>
                             </div>
                             <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label><textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white" /></div>
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Enlace Notion</label>
                                     <input
@@ -108,7 +104,7 @@ const TaskModal: React.FC = () => {
                                         value={notionUrl}
                                         onChange={e => setNotionUrl(e.target.value)}
                                         placeholder="https://notion.so/..."
-                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-xs"
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                                     />
                                 </div>
                                 <div>
@@ -118,17 +114,7 @@ const TaskModal: React.FC = () => {
                                         value={driveUrl}
                                         onChange={e => setDriveUrl(e.target.value)}
                                         placeholder="https://drive.google.com/..."
-                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-xs"
-                                    />
-                                </div>
-                                <div className="col-span-2 lg:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">GitHub URL</label>
-                                    <input
-                                        type="url"
-                                        value={githubUrl}
-                                        onChange={e => setGithubUrl(e.target.value)}
-                                        placeholder="https://github.com/..."
-                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-xs"
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
                                     />
                                 </div>
                             </div>
