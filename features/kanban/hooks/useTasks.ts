@@ -73,7 +73,13 @@ const useTasks = create<TasksState>((set, get) => ({
         try {
             const { data, error } = await supabase.from('tasks').insert([taskToInsert]).select().single();
             if (error) {
-                console.error('Supabase error during createTask:', error);
+                console.error('Supabase error during createTask:', {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint
+                });
+                alert(`Error Supabase (${error.code}): ${error.message}\n${error.details || ''}`);
                 return false;
             }
             console.log('Task created successfully:', data);
@@ -113,7 +119,13 @@ const useTasks = create<TasksState>((set, get) => ({
         try {
             const { error } = await supabase.from('tasks').update(finalUpdates).eq('id', id);
             if (error) {
-                console.error('Supabase error during updateTask:', error);
+                console.error('Supabase error during updateTask:', {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint
+                });
+                alert(`Error Supabase (${error.code}): ${error.message}\n${error.details || ''}`);
                 return false;
             }
 
