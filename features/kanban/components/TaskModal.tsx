@@ -55,14 +55,20 @@ const TaskModal: React.FC = () => {
 
         if (taskModalData) {
             await updateTask(taskModalData.id, taskData);
+            closeTaskModal();
         } else {
-            await createTask({
+            const success = await createTask({
                 ...taskData,
                 workspace_id: currentWorkspaceId,
                 order: 0, progress: 0, project_id: null, assigned_to: null, history: []
             } as any);
+
+            if (success) {
+                closeTaskModal();
+            } else {
+                alert('Error al crear la tarea. Revisa la consola para más detalles.');
+            }
         }
-        closeTaskModal();
     };
 
     const formatDate = (dateString?: string) => {

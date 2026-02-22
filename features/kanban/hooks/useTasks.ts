@@ -7,7 +7,7 @@ interface TasksState {
     tasks: Task[];
     isLoading: boolean;
     fetchTasks: (workspaceId: string) => Promise<void>;
-    createTask: (task: Omit<Task, 'id' | 'created_at' | 'history' | 'updated_at'>) => Promise<void>;
+    createTask: (task: Omit<Task, 'id' | 'created_at' | 'history' | 'updated_at'>) => Promise<boolean>;
     updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
     deleteTask: (id: string) => Promise<void>;
     scheduleTask: (id: string, scheduledAt: string | null) => Promise<void>;
@@ -44,7 +44,10 @@ const useTasks = create<TasksState>((set, get) => ({
 
     createTask: async (newTaskData) => {
         const user = useAuthStore.getState().session?.user;
-        if (!user) return;
+        if (!user) {
+            console.error('No user session found during task creation');
+            return false;
+        }
 
         const initialHistory: HistoryEvent[] = [{
             id: crypto.randomUUID(),
@@ -64,8 +67,13 @@ const useTasks = create<TasksState>((set, get) => ({
         };
 
         const { data, error } = await supabase.from('tasks').insert([taskToInsert]).select().single();
-        if (error) console.error(error);
-        else set((state) => ({ tasks: [...state.tasks, data] }));
+        if (error) {
+            console.error('Error creating task in Supabase:', error);
+            return false;
+        } else {
+            set((state) => ({ tasks: [...state.tasks, data] }));
+            return true;
+        }
     },
 
     updateTask: async (id, updates) => {
