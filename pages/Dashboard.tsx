@@ -10,8 +10,8 @@ import { useUIStore } from '../store/uiStore';
 import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
 import useTasks from '../features/kanban/hooks/useTasks';
 import { generateProjectReportData } from '../services/geminiService';
+import { generatePremiumPDF } from '../services/pdfReportService';
 import { supabase } from '../services/supabase';
-import { jsPDF } from 'jspdf';
 import {
     LogOut, Sun, Moon, Plus, Loader2, Sparkles, Mic, Home, CalendarDays,
     FolderOpen, User as UserIcon, Check, MoreHorizontal, ArrowUp,
@@ -62,31 +62,19 @@ const Dashboard: React.FC = () => {
         }
     }, [currentWorkspaceId, fetchTasks]);
 
-    const cleanText = (text: any) => text ? String(text).replace(/[^\x20-\x7E\xA0-\xFF\u20AC\n\r]/g, "").trim() : "";
-
     const handleGeneratePDF = async () => {
-        if (!tasks || tasks.length === 0) { alert("No hay tareas."); return; }
+        if (!tasks || tasks.length === 0) { alert("No hay tareas para generar el informe."); return; }
         setIsGeneratingReport(true);
         try {
             const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'Proyecto';
             const aiData = await generateProjectReportData(tasks, wsName);
-            const doc = new jsPDF();
-            let y = 20;
-            const checkPageBreak = (space: number) => { if (y + space > 280) { doc.addPage(); y = 20; } };
-            doc.setFontSize(20); doc.setTextColor(50); doc.text("INFORME DUALINK", 20, y); y += 20;
-            doc.setFontSize(10); doc.setTextColor(60);
-            const summary = doc.splitTextToSize(cleanText(aiData.executive_summary), 170);
-            doc.text(summary, 20, y); y += (summary.length * 5) + 20;
-            const tasksToPrint = aiData.analyzed_tasks || tasks.map(t => ({ original_title: t.title, ai_audit: "Sin datos", smart_priority: t.priority }));
-            tasksToPrint.forEach((task: any, i: number) => {
-                checkPageBreak(30);
-                doc.setFontSize(11); doc.setTextColor(0);
-                doc.text(`${i + 1}. ${cleanText(task.original_title)}`, 20, y); y += 6;
-                doc.setFontSize(9); doc.setTextColor(100);
-                doc.text(`IA: ${cleanText(task.ai_audit)}`, 25, y); y += 10;
-            });
-            doc.save(`Informe_${wsName}.pdf`);
-        } catch (e) { alert("Error PDF"); } finally { setIsGeneratingReport(false); }
+            generatePremiumPDF(tasks, aiData, wsName);
+        } catch (e) {
+            console.error('Error generating PDF:', e);
+            alert("Error al generar el informe. Inténtalo de nuevo.");
+        } finally {
+            setIsGeneratingReport(false);
+        }
     };
 
     const urgentTasks = tasks?.filter(t => t.priority === 'high').slice(0, 5) || [];
