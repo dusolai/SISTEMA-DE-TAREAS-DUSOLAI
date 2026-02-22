@@ -13,11 +13,24 @@ import { generateProjectReportData } from '../services/geminiService';
 import { supabase } from '../services/supabase';
 import { jsPDF } from 'jspdf';
 import {
-    LogOut, Sun, Moon, Settings, Plus, Loader2, Sparkles, Bell, Mic, Home, CalendarDays,
-    FolderOpen, User as UserIcon, Check, MoreHorizontal, ArrowUp, ArrowDown,
-    DollarSign, Users, TrendingUp, AlertCircle, PhoneIncoming, ChevronUp, ChevronDown,
-    Download, Monitor, Smartphone, LayoutDashboard
+    LogOut, Sun, Moon, Plus, Loader2, Sparkles, Mic, Home, CalendarDays,
+    FolderOpen, User as UserIcon, Check, MoreHorizontal, ArrowUp,
+    Users, TrendingUp, AlertCircle, ChevronDown,
+    Download, LayoutDashboard
 } from 'lucide-react';
+
+// JS-based media query hook (reliable regardless of Tailwind version)
+function useIsDesktop() {
+    const [isDesktop, setIsDesktop] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 1024px)');
+        setIsDesktop(mq.matches);
+        const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
+    return isDesktop;
+}
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
@@ -26,6 +39,7 @@ const Dashboard: React.FC = () => {
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     const [activeView, setActiveView] = useState<'home' | 'calendar'>('home');
     const [desktopTab, setDesktopTab] = useState<'kanban' | 'calendar'>('kanban');
+    const isDesktop = useIsDesktop();
 
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
     const { tasks, fetchTasks } = useTasks();
@@ -81,205 +95,203 @@ const Dashboard: React.FC = () => {
     const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
     // ===================== DESKTOP LAYOUT =====================
-    const DesktopLayout = () => (
-        <div className="hidden lg:flex h-[100dvh] overflow-hidden">
-            {/* Sidebar */}
-            <aside className="w-64 flex-shrink-0 bg-white dark:bg-[#0a0e1f] border-r border-slate-100 dark:border-slate-800 flex flex-col">
-                {/* Logo */}
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-                            <Mic className="text-white w-5 h-5" />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">DUALINK</h1>
-                            <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">Task Manager</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Workspace Selector */}
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Workspace</label>
-                    <select
-                        value={currentWorkspaceId || ''}
-                        onChange={(e) => setWorkspace(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-                    >
-                        {isLoadingWS ? <option>Cargando...</option> : workspaces?.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
-                    </select>
-                </div>
-
-                {/* Nav Items */}
-                <nav className="flex-1 p-3 space-y-1">
-                    <button
-                        onClick={() => setDesktopTab('kanban')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${desktopTab === 'kanban' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}
-                    >
-                        <LayoutDashboard size={18} /> Kanban Board
-                    </button>
-                    <button
-                        onClick={() => setDesktopTab('calendar')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${desktopTab === 'calendar' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}
-                    >
-                        <CalendarDays size={18} /> Calendario
-                    </button>
-                    <button
-                        onClick={openWorkspaceManager}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all"
-                    >
-                        <FolderOpen size={18} /> Workspaces
-                    </button>
-                </nav>
-
-                {/* Bottom Actions */}
-                <div className="p-4 space-y-2 border-t border-slate-100 dark:border-slate-800">
-                    {/* Add Task Button */}
-                    <button
-                        onClick={() => openTaskModal()}
-                        disabled={!currentWorkspaceId}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-sm transition-all shadow-lg shadow-primary/20 disabled:bg-gray-400"
-                    >
-                        <Plus size={18} /> Nueva Tarea
-                    </button>
-
-                    {/* Download APK Button */}
-                    <a
-                        href="https://pwabuilder.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-500/20"
-                    >
-                        <Download size={18} /> Descargar APK
-                    </a>
-
-                    {/* User Actions */}
-                    <div className="flex items-center gap-1 pt-2">
-                        <button onClick={toggleTheme} className="flex-1 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center">
-                            {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
-                        </button>
-                        <button onClick={handleGeneratePDF} disabled={isGeneratingReport} className="flex-1 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center">
-                            {isGeneratingReport ? <Loader2 className="animate-spin text-primary" size={18} /> : <Sparkles className="text-primary" size={18} />}
-                        </button>
-                        <button onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)} className="flex-1 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center">
-                            <Mic size={18} className="text-primary" />
-                        </button>
-                        <button onClick={() => supabase.auth.signOut()} className="flex-1 p-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors flex items-center justify-center">
-                            <LogOut size={18} className="text-red-500" />
-                        </button>
-                    </div>
-                </div>
-            </aside>
-
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-[#020412]">
-                {/* Top Bar */}
-                <header className="flex-shrink-0 h-16 bg-white dark:bg-[#0a0e1f] border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-8">
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-xl font-black text-slate-900 dark:text-white">
-                            {desktopTab === 'kanban' ? 'Kanban Board' : 'Calendario Semanal'}
-                        </h2>
-                        <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest">
-                            {totalTasks} tareas
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                            <Monitor size={14} /> Vista PC
-                        </div>
-                        <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 text-xs font-black">
-                            {completionRate}% completado
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-slate-500">
-                            <UserIcon size={14} />
-                            <span className="font-medium truncate max-w-[200px]">{session?.user?.email}</span>
-                        </div>
-                    </div>
-                </header>
-
-                {/* Content */}
-                <div className="flex-1 overflow-hidden flex">
-                    {desktopTab === 'kanban' ? (
-                        <div className="flex-1 flex overflow-hidden">
-                            {/* Kanban - main area */}
-                            <div className="flex-1 overflow-auto p-6">
-                                <div className="h-full min-h-[600px]">
-                                    {currentWorkspaceId ? <KanbanBoard /> : (
-                                        <div className="flex items-center justify-center h-full text-gray-400 italic bg-white dark:bg-[#0f1325] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800">
-                                            Selecciona un workspace para ver las tareas
-                                        </div>
-                                    )}
-                                </div>
+    if (isDesktop) {
+        return (
+            <div className="font-sans antialiased h-[100dvh] overflow-hidden flex" style={{ background: theme === 'dark' ? '#020412' : '#f8fafc' }}>
+                {/* Sidebar */}
+                <aside style={{ width: 260, flexShrink: 0, borderRight: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0', background: theme === 'dark' ? '#0a0e1f' : '#ffffff', display: 'flex', flexDirection: 'column' }}>
+                    {/* Logo */}
+                    <div style={{ padding: '24px', borderBottom: '1px solid', borderBottomColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: '#5848e8', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(88,72,232,0.3)' }}>
+                                <Mic style={{ color: 'white', width: 20, height: 20 }} />
                             </div>
-
-                            {/* Right Sidebar - Stats & Urgent */}
-                            <aside className="w-80 flex-shrink-0 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-[#0a0e1f] overflow-y-auto p-5 space-y-5">
-                                {/* Stats Cards */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800">
-                                        <div className="p-2 rounded-xl bg-primary/10 w-fit mb-2"><TrendingUp className="text-primary w-4 h-4" /></div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Eficiencia</p>
-                                        <p className="text-2xl font-black text-slate-900 dark:text-white">{completionRate}%</p>
-                                    </div>
-                                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800">
-                                        <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-500/20 w-fit mb-2"><Users className="text-orange-500 w-4 h-4" /></div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Activas</p>
-                                        <p className="text-2xl font-black text-slate-900 dark:text-white">{totalTasks}</p>
-                                    </div>
-                                </div>
-
-                                {/* Chart */}
-                                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800">
-                                    <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Activity Flow</h3>
-                                    <div className="h-[140px] w-full"><DashboardChart /></div>
-                                </div>
-
-                                {/* Urgent Tasks */}
-                                {urgentTasks.length > 0 && (
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                                            <AlertCircle size={14} className="text-red-500" /> Urgentes
-                                        </h3>
-                                        <div className="space-y-2">
-                                            {urgentTasks.map(task => (
-                                                <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-500/5 border border-red-100 dark:border-red-500/20">
-                                                    <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0">
-                                                        <AlertCircle size={14} />
-                                                    </div>
-                                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{task.title}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </aside>
+                            <div>
+                                <h1 style={{ fontSize: 18, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>DUALINK</h1>
+                                <p style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, margin: 0 }}>Task Manager Pro</p>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="flex-1 overflow-hidden">
-                            <WeeklyCalendarView />
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Audio Recorder Drawer - Desktop */}
-            {isAudioDrawerOpen && (
-                <div className="fixed bottom-4 right-4 w-96 h-[400px] bg-white dark:bg-[#0f1325] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 flex flex-col overflow-hidden">
-                    <div onClick={() => setIsAudioDrawerOpen(false)} className="h-10 flex items-center justify-center cursor-pointer border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4"><AudioRecorder /></div>
+
+                    {/* Workspace Selector */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid', borderBottomColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, display: 'block', marginBottom: 6 }}>Workspace</label>
+                        <select
+                            value={currentWorkspaceId || ''}
+                            onChange={(e) => setWorkspace(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', background: theme === 'dark' ? '#1e293b' : '#f1f5f9', border: '1px solid', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: 12, fontSize: 13, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', outline: 'none', cursor: 'pointer' }}
+                        >
+                            {isLoadingWS ? <option>Cargando...</option> : workspaces?.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Nav Items */}
+                    <nav style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <button
+                            onClick={() => setDesktopTab('kanban')}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: desktopTab === 'kanban' ? '#5848e8' : 'transparent', color: desktopTab === 'kanban' ? 'white' : '#94a3b8', boxShadow: desktopTab === 'kanban' ? '0 4px 12px rgba(88,72,232,0.3)' : 'none' }}
+                        >
+                            <LayoutDashboard size={18} /> Kanban Board
+                        </button>
+                        <button
+                            onClick={() => setDesktopTab('calendar')}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: desktopTab === 'calendar' ? '#5848e8' : 'transparent', color: desktopTab === 'calendar' ? 'white' : '#94a3b8', boxShadow: desktopTab === 'calendar' ? '0 4px 12px rgba(88,72,232,0.3)' : 'none' }}
+                        >
+                            <CalendarDays size={18} /> Calendario
+                        </button>
+                        <button
+                            onClick={openWorkspaceManager}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', background: 'transparent', color: '#94a3b8' }}
+                        >
+                            <FolderOpen size={18} /> Workspaces
+                        </button>
+                    </nav>
+
+                    {/* Bottom Actions */}
+                    <div style={{ padding: 16, borderTop: '1px solid', borderTopColor: theme === 'dark' ? '#1e293b' : '#e2e8f0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <button
+                            onClick={() => openTaskModal()}
+                            disabled={!currentWorkspaceId}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: '#5848e8', color: 'white', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(88,72,232,0.2)' }}
+                        >
+                            <Plus size={18} /> Nueva Tarea
+                        </button>
+
+                        {/* Download APK Button — links to the apk file in the repo's public folder */}
+                        <a
+                            href="/dualink.apk"
+                            download
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: '#10b981', color: 'white', fontWeight: 700, fontSize: 14, textDecoration: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.2)', boxSizing: 'border-box' }}
+                        >
+                            <Download size={18} /> Descargar APK
+                        </a>
+
+                        <div style={{ display: 'flex', gap: 4, paddingTop: 8 }}>
+                            <button onClick={toggleTheme} style={{ flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', background: theme === 'dark' ? '#1e293b' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {theme === 'dark' ? <Sun size={18} style={{ color: '#fbbf24' }} /> : <Moon size={18} style={{ color: '#64748b' }} />}
+                            </button>
+                            <button onClick={handleGeneratePDF} disabled={isGeneratingReport} style={{ flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', background: theme === 'dark' ? '#1e293b' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isGeneratingReport ? <Loader2 style={{ color: '#5848e8', animation: 'spin 1s linear infinite' }} size={18} /> : <Sparkles style={{ color: '#5848e8' }} size={18} />}
+                            </button>
+                            <button onClick={() => setIsAudioDrawerOpen(!isAudioDrawerOpen)} style={{ flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', background: theme === 'dark' ? '#1e293b' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Mic size={18} style={{ color: '#5848e8' }} />
+                            </button>
+                            <button onClick={() => supabase.auth.signOut()} style={{ flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', background: theme === 'dark' ? '#1e293b' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <LogOut size={18} style={{ color: '#ef4444' }} />
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+                {/* Main Content Area */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {/* Top Bar */}
+                    <header style={{ flexShrink: 0, height: 64, background: theme === 'dark' ? '#0a0e1f' : '#ffffff', borderBottom: '1px solid', borderBottomColor: theme === 'dark' ? '#1e293b' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <h2 style={{ fontSize: 20, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>
+                                {desktopTab === 'kanban' ? '📋 Kanban Board' : '📅 Calendario Semanal'}
+                            </h2>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#5848e8', background: 'rgba(88,72,232,0.1)', padding: '4px 12px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 2 }}>
+                                {totalTasks} tareas
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 12, fontWeight: 900 }}>
+                                {completionRate}% completado
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#94a3b8' }}>
+                                <UserIcon size={14} />
+                                <span style={{ fontWeight: 500, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session?.user?.email}</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Content */}
+                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+                        {desktopTab === 'kanban' ? (
+                            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                                {/* Kanban - main area */}
+                                <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+                                    <div style={{ minHeight: 600, height: '100%' }}>
+                                        {currentWorkspaceId ? <KanbanBoard /> : (
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', fontStyle: 'italic', background: theme === 'dark' ? '#0f1325' : '#ffffff', borderRadius: 16, border: '2px dashed', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                                                Selecciona un workspace para ver las tareas
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Right Sidebar - Stats & Urgent */}
+                                <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid', borderLeftColor: theme === 'dark' ? '#1e293b' : '#e2e8f0', background: theme === 'dark' ? '#0a0e1f' : '#ffffff', overflowY: 'auto', padding: 20 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                        {/* Stats Cards */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                            <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                                                <div style={{ padding: 8, borderRadius: 12, background: 'rgba(88,72,232,0.1)', width: 'fit-content', marginBottom: 8 }}><TrendingUp style={{ color: '#5848e8', width: 16, height: 16 }} /></div>
+                                                <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, margin: 0 }}>Eficiencia</p>
+                                                <p style={{ fontSize: 28, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>{completionRate}%</p>
+                                            </div>
+                                            <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                                                <div style={{ padding: 8, borderRadius: 12, background: 'rgba(249,115,22,0.1)', width: 'fit-content', marginBottom: 8 }}><Users style={{ color: '#f97316', width: 16, height: 16 }} /></div>
+                                                <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, margin: 0 }}>Activas</p>
+                                                <p style={{ fontSize: 28, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>{totalTasks}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Chart */}
+                                        <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                                            <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: '0 0 12px 0' }}>Activity Flow</h3>
+                                            <div style={{ height: 140, width: '100%' }}><DashboardChart /></div>
+                                        </div>
+
+                                        {/* Urgent Tasks */}
+                                        {urgentTasks.length > 0 && (
+                                            <div>
+                                                <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <AlertCircle size={14} style={{ color: '#ef4444' }} /> Urgentes
+                                                </h3>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                    {urgentTasks.map(task => (
+                                                        <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: theme === 'dark' ? 'rgba(239,68,68,0.05)' : 'rgba(239,68,68,0.05)', border: '1px solid', borderColor: theme === 'dark' ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)' }}>
+                                                            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                                <AlertCircle size={14} style={{ color: '#ef4444' }} />
+                                                            </div>
+                                                            <span style={{ fontSize: 12, fontWeight: 700, color: theme === 'dark' ? '#e2e8f0' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </aside>
+                            </div>
+                        ) : (
+                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <WeeklyCalendarView />
+                            </div>
+                        )}
+                    </div>
                 </div>
-            )}
 
-            <TaskModal />
-            <WorkspaceManager />
-        </div>
-    );
+                {/* Audio Recorder Drawer - Desktop */}
+                {isAudioDrawerOpen && (
+                    <div style={{ position: 'fixed', bottom: 16, right: 16, width: 384, height: 400, background: theme === 'dark' ? '#0f1325' : '#ffffff', borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0', zIndex: 50, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <div onClick={() => setIsAudioDrawerOpen(false)} style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderBottom: '1px solid', borderBottomColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                            <ChevronDown style={{ width: 20, height: 20, color: '#94a3b8' }} />
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}><AudioRecorder /></div>
+                    </div>
+                )}
 
-    // ===================== MOBILE LAYOUT (existing) =====================
-    const MobileLayout = () => (
-        <div className="lg:hidden font-sans transition-colors duration-200 antialiased h-[100dvh] overflow-hidden flex flex-col">
+                <TaskModal />
+                <WorkspaceManager />
+            </div>
+        );
+    }
+
+    // ===================== MOBILE LAYOUT =====================
+    return (
+        <div className="font-sans transition-colors duration-200 antialiased h-[100dvh] overflow-hidden flex flex-col">
             <div className="max-w-md mx-auto w-full h-full relative flex flex-col shadow-2xl overflow-hidden border-x border-gray-100 dark:border-gray-800/50">
                 {/* Header */}
                 <header className="flex-shrink-0 pt-12 pb-5 px-6 flex items-center justify-between sticky top-0 z-30 bg-white/95 dark:bg-[#020412]/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800/50">
@@ -319,7 +331,7 @@ const Dashboard: React.FC = () => {
                                 <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">LIVE STATS</span>
                             </div>
                             <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 snap-x snap-mandatory">
-                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
+                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm">
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="p-2 rounded-xl bg-primary/10 dark:bg-primary/20"><TrendingUp className="text-primary w-5 h-5" /></div>
                                         <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">+5% <ArrowUp size={10} className="ml-0.5" /></span>
@@ -327,7 +339,7 @@ const Dashboard: React.FC = () => {
                                     <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Efficiency</p>
                                     <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{completionRate}%</p>
                                 </div>
-                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-orange-500/30">
+                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm">
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-500/20"><Users className="text-orange-500 w-5 h-5" /></div>
                                         <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">NEW <ArrowUp size={10} className="ml-0.5" /></span>
@@ -363,7 +375,6 @@ const Dashboard: React.FC = () => {
                             <section className="pb-8">
                                 <div className="flex items-center justify-between mb-5">
                                     <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Urgent Tasks</h2>
-                                    <button className="text-primary text-[10px] font-black uppercase tracking-widest bg-primary/5 px-2 py-1 rounded-md">View All</button>
                                 </div>
                                 <div className="space-y-4">
                                     {urgentTasks.map((task) => (
@@ -437,13 +448,6 @@ const Dashboard: React.FC = () => {
                 <WorkspaceManager />
             </div>
         </div>
-    );
-
-    return (
-        <>
-            <DesktopLayout />
-            <MobileLayout />
-        </>
     );
 };
 
