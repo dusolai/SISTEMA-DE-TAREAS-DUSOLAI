@@ -6,9 +6,11 @@ interface UIState {
     isWorkspaceManagerOpen: boolean;
     isTaskModalOpen: boolean;
     currentWorkspaceId: string | null;
-    taskModalData: Task | null; // <--- RESTAURADO: Nombre original
+    taskModalData: Task | null;
+    isAnalysisSidebarOpen: boolean;
 
     toggleTheme: () => void;
+    toggleAnalysisSidebar: () => void;
     openWorkspaceManager: () => void;
     closeWorkspaceManager: () => void;
     openTaskModal: (task?: Task) => void;
@@ -28,12 +30,15 @@ export const useUIStore = create<UIState>((set) => ({
     isTaskModalOpen: false,
     currentWorkspaceId: null,
     taskModalData: null,
+    isAnalysisSidebarOpen: true,
 
     toggleTheme: () => set((state) => {
         const newTheme = state.theme === 'light' ? 'dark' : 'light';
         localStorage.setItem('dualink-theme', newTheme);
         return { theme: newTheme };
     }),
+
+    toggleAnalysisSidebar: () => set((state) => ({ isAnalysisSidebarOpen: !state.isAnalysisSidebarOpen })),
 
     openWorkspaceManager: () => set({ isWorkspaceManagerOpen: true }),
     closeWorkspaceManager: () => set({ isWorkspaceManagerOpen: false }),

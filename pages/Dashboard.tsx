@@ -34,8 +34,9 @@ function useIsDesktop() {
 
 const Dashboard: React.FC = () => {
     const session = useAuthStore((state) => state.session);
-    const { theme, toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager, openTaskModal } = useUIStore();
+    const { theme, toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager, openTaskModal, isAnalysisSidebarOpen, toggleAnalysisSidebar } = useUIStore();
     const [isAudioDrawerOpen, setIsAudioDrawerOpen] = useState(false);
+    const [showAllUrgent, setShowAllUrgent] = useState(false);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     const [activeView, setActiveView] = useState<'home' | 'calendar'>('home');
     const [desktopTab, setDesktopTab] = useState<'kanban' | 'calendar'>('kanban');
@@ -77,7 +78,7 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const urgentTasks = tasks?.filter(t => t.priority === 'high').slice(0, 5) || [];
+    const urgentTasks = showAllUrgent ? (tasks?.filter(t => t.priority === 'high') || []) : (tasks?.filter(t => t.priority === 'high').slice(0, 5) || []);
     const doneTasks = tasks?.filter(t => t.status === 'done').length || 0;
     const totalTasks = tasks?.length || 0;
     const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
@@ -182,6 +183,13 @@ const Dashboard: React.FC = () => {
                             <span style={{ fontSize: 11, fontWeight: 700, color: '#5848e8', background: 'rgba(88,72,232,0.1)', padding: '4px 12px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 2 }}>
                                 {totalTasks} tareas
                             </span>
+                            <button
+                                onClick={toggleAnalysisSidebar}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', background: theme === 'dark' ? '#1e293b' : '#f1f5f9', color: isAnalysisSidebarOpen ? '#5848e8' : '#94a3b8', fontSize: 11, fontWeight: 700, transition: 'all 0.2s' }}
+                                title={isAnalysisSidebarOpen ? "Ocultar Análisis" : "Mostrar Análisis"}
+                            >
+                                <TrendingUp size={14} /> {isAnalysisSidebarOpen ? "Ocultar Análisis" : "Ver Análisis"}
+                            </button>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <span style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 12, fontWeight: 900 }}>
@@ -210,48 +218,62 @@ const Dashboard: React.FC = () => {
                                 </div>
 
                                 {/* Right Sidebar - Stats & Urgent */}
-                                <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid', borderLeftColor: theme === 'dark' ? '#1e293b' : '#e2e8f0', background: theme === 'dark' ? '#0a0e1f' : '#ffffff', overflowY: 'auto', padding: 20 }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                                        {/* Stats Cards */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                            <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
-                                                <div style={{ padding: 8, borderRadius: 12, background: 'rgba(88,72,232,0.1)', width: 'fit-content', marginBottom: 8 }}><TrendingUp style={{ color: '#5848e8', width: 16, height: 16 }} /></div>
-                                                <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, margin: 0 }}>Eficiencia</p>
-                                                <p style={{ fontSize: 28, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>{completionRate}%</p>
-                                            </div>
-                                            <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
-                                                <div style={{ padding: 8, borderRadius: 12, background: 'rgba(249,115,22,0.1)', width: 'fit-content', marginBottom: 8 }}><Users style={{ color: '#f97316', width: 16, height: 16 }} /></div>
-                                                <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, margin: 0 }}>Activas</p>
-                                                <p style={{ fontSize: 28, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>{totalTasks}</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Chart */}
-                                        <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
-                                            <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: '0 0 12px 0' }}>Activity Flow</h3>
-                                            <div style={{ height: 140, width: '100%' }}><DashboardChart tasks={tasks} /></div>
-                                        </div>
-
-                                        {/* Urgent Tasks */}
-                                        {urgentTasks.length > 0 && (
-                                            <div>
-                                                <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                    <AlertCircle size={14} style={{ color: '#ef4444' }} /> Urgentes
-                                                </h3>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                    {urgentTasks.map(task => (
-                                                        <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: theme === 'dark' ? 'rgba(239,68,68,0.05)' : 'rgba(239,68,68,0.05)', border: '1px solid', borderColor: theme === 'dark' ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)' }}>
-                                                            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                                <AlertCircle size={14} style={{ color: '#ef4444' }} />
-                                                            </div>
-                                                            <span style={{ fontSize: 12, fontWeight: 700, color: theme === 'dark' ? '#e2e8f0' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
-                                                        </div>
-                                                    ))}
+                                {isAnalysisSidebarOpen && (
+                                    <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid', borderLeftColor: theme === 'dark' ? '#1e293b' : '#e2e8f0', background: theme === 'dark' ? '#0a0e1f' : '#ffffff', overflowY: 'auto', padding: 20 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                            {/* Stats Cards */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                                <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                                                    <div style={{ padding: 8, borderRadius: 12, background: 'rgba(88,72,232,0.1)', width: 'fit-content', marginBottom: 8 }}><TrendingUp style={{ color: '#5848e8', width: 16, height: 16 }} /></div>
+                                                    <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, margin: 0 }}>Eficiencia</p>
+                                                    <p style={{ fontSize: 28, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>{completionRate}%</p>
+                                                </div>
+                                                <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                                                    <div style={{ padding: 8, borderRadius: 12, background: 'rgba(249,115,22,0.1)', width: 'fit-content', marginBottom: 8 }}><Users style={{ color: '#f97316', width: 16, height: 16 }} /></div>
+                                                    <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 2, margin: 0 }}>Activas</p>
+                                                    <p style={{ fontSize: 28, fontWeight: 900, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0 }}>{totalTasks}</p>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </aside>
+
+                                            {/* Chart */}
+                                            <div style={{ padding: 16, borderRadius: 16, background: theme === 'dark' ? '#0f1325' : '#f8fafc', border: '1px solid', borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
+                                                <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: '0 0 12px 0' }}>Activity Flow</h3>
+                                                <div style={{ height: 140, width: '100%' }}><DashboardChart tasks={tasks} /></div>
+                                            </div>
+
+                                            {/* Urgent Tasks */}
+                                            {urgentTasks.length > 0 && (
+                                                <div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                                        <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                            <AlertCircle size={14} style={{ color: '#ef4444' }} /> Urgentes
+                                                        </h3>
+                                                        {(tasks?.filter(t => t.priority === 'high').length || 0) > 5 && (
+                                                            <button
+                                                                onClick={() => setShowAllUrgent(!showAllUrgent)}
+                                                                style={{ fontSize: 11, fontWeight: 700, color: '#5848e8', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                                                            >
+                                                                {showAllUrgent ? 'Ver menos' : 'Ver todo'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                        {urgentTasks.map(task => (
+                                                            <div key={task.id}
+                                                                onClick={() => openTaskModal(task)}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: theme === 'dark' ? 'rgba(239,68,68,0.05)' : 'rgba(239,68,68,0.05)', border: '1px solid', borderColor: theme === 'dark' ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)', cursor: 'pointer' }}>
+                                                                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                                    <AlertCircle size={14} style={{ color: '#ef4444' }} />
+                                                                </div>
+                                                                <span style={{ fontSize: 12, fontWeight: 700, color: theme === 'dark' ? '#e2e8f0' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </aside>
+                                )}
                             </div>
                         ) : (
                             <div style={{ flex: 1, overflow: 'hidden' }}>
