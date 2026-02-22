@@ -10,6 +10,7 @@ interface TasksState {
     createTask: (task: Omit<Task, 'id' | 'created_at' | 'history' | 'updated_at'>) => Promise<void>;
     updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
     deleteTask: (id: string) => Promise<void>;
+    scheduleTask: (id: string, scheduledAt: string | null) => Promise<void>;
 }
 
 const generateCommitMessage = (updates: Partial<Task>, oldTask?: Task): string => {
@@ -34,7 +35,7 @@ const useTasks = create<TasksState>((set, get) => ({
 
         if (error) {
             console.error('Error fetching tasks:', error);
-            set({ tasks: [] }); 
+            set({ tasks: [] });
         } else {
             set({ tasks: data || [] });
         }
@@ -75,7 +76,7 @@ const useTasks = create<TasksState>((set, get) => ({
 
         let updatedHistory = oldTask.history || [];
         if (!updates.order && !updates.progress) {
-             const newEvent: HistoryEvent = {
+            const newEvent: HistoryEvent = {
                 id: crypto.randomUUID(),
                 action: updates.status ? 'status_change' : 'update',
                 details: generateCommitMessage(updates, oldTask),
@@ -87,13 +88,22 @@ const useTasks = create<TasksState>((set, get) => ({
 
         const finalUpdates = { ...updates, history: updatedHistory, updated_at: new Date().toISOString() };
         set((state) => ({ tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...finalUpdates } : t)) }));
-        
+
         await supabase.from('tasks').update(finalUpdates).eq('id', id);
     },
 
     deleteTask: async (id) => {
         set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
         await supabase.from('tasks').delete().eq('id', id);
+    },
+
+    scheduleTask: async (id, scheduledAt) => {
+        set((state) => ({
+            tasks: state.tasks.map((t) =>
+                t.id === id ? { ...t, scheduled_at: scheduledAt } : t
+            ),
+        }));
+        await supabase.from('tasks').update({ scheduled_at: scheduledAt }).eq('id', id);
     },
 }));
 

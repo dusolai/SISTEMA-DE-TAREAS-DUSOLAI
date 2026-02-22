@@ -4,6 +4,7 @@ import AudioRecorder from '../features/audio/components/AudioRecorder';
 import TaskModal from '../features/kanban/components/TaskModal';
 import WorkspaceManager from '../features/kanban/components/WorkspaceManager';
 import DashboardChart from '../features/dashboard/components/DashboardChart';
+import WeeklyCalendarView from './WeeklyCalendarView';
 import useAuthStore from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
 import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
@@ -12,7 +13,7 @@ import { generateProjectReportData } from '../services/geminiService';
 import { supabase } from '../services/supabase';
 import { jsPDF } from 'jspdf';
 import {
-    LogOut, Sun, Moon, Settings, Plus, Loader2, Sparkles, Bell, Mic, Home, PieChart,
+    LogOut, Sun, Moon, Settings, Plus, Loader2, Sparkles, Bell, Mic, Home, CalendarDays,
     FolderOpen, User as UserIcon, Check, MoreHorizontal, ArrowUp, ArrowDown,
     DollarSign, Users, TrendingUp, AlertCircle, PhoneIncoming, ChevronUp, ChevronDown
 } from 'lucide-react';
@@ -22,6 +23,7 @@ const Dashboard: React.FC = () => {
     const { theme, toggleTheme, currentWorkspaceId, setWorkspace, openWorkspaceManager, openTaskModal } = useUIStore();
     const [isAudioDrawerOpen, setIsAudioDrawerOpen] = useState(false);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+    const [activeView, setActiveView] = useState<'home' | 'calendar'>('home');
 
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
     const { tasks, fetchTasks } = useTasks();
@@ -115,118 +117,126 @@ const Dashboard: React.FC = () => {
                 </header>
 
                 {/* Main Scrollable Content */}
-                <main className="flex-1 overflow-y-auto px-5 pt-6 space-y-6 pb-32 no-scrollbar">
-                    {/* Performance Section - High Contrast Cards */}
-                    <section>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Performance</h2>
-                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">LIVE STATS</span>
-                        </div>
-                        <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 snap-x snap-mandatory">
-                            {/* Efficiency Card */}
-                            <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-2 rounded-xl bg-primary/10 dark:bg-primary/20">
-                                        <TrendingUp className="text-primary w-5 h-5" />
-                                    </div>
-                                    <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
-                                        +5% <ArrowUp size={10} className="ml-0.5" />
-                                    </span>
-                                </div>
-                                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Efficiency</p>
-                                <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">84%</p>
+                {activeView === 'calendar' ? (
+                    <div className="flex-1 overflow-hidden flex flex-col">
+                        <WeeklyCalendarView />
+                    </div>
+                ) : (
+                    <main className="flex-1 overflow-y-auto px-5 pt-6 space-y-6 pb-32 no-scrollbar">
+                        {/* Performance Section - High Contrast Cards */}
+                        <section>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Performance</h2>
+                                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">LIVE STATS</span>
                             </div>
-
-                            {/* Active Tasks Card */}
-                            <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-orange-500/30">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-500/20">
-                                        <Users className="text-orange-500 w-5 h-5" />
-                                    </div>
-                                    <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
-                                        NEW <ArrowUp size={10} className="ml-0.5" />
-                                    </span>
-                                </div>
-                                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Active Tasks</p>
-                                <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{tasks?.length || 0}</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Chart Section - Premium Box */}
-                    <section className="bg-white dark:bg-[#0f1325] p-6 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none">
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity Flow</h3>
-                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Revenue Insights</p>
-                            </div>
-                            <button className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
-                                <MoreHorizontal size={20} />
-                            </button>
-                        </div>
-                        <div className="h-[180px] w-full relative">
-                            <DashboardChart />
-                        </div>
-                    </section>
-
-                    {/* Kanban Section */}
-                    <section>
-                        <h2 className="text-lg font-semibold mb-3 px-1">Pipeline</h2>
-                        <div className="h-[500px] w-full">
-                            {currentWorkspaceId ? <KanbanBoard /> : <div className="flex items-center justify-center p-8 text-gray-400 italic bg-gray-50 dark:bg-card-dark/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">Selecciona un espacio</div>}
-                        </div>
-                    </section>
-
-                    {/* Urgent Tasks Section - High Visibility */}
-                    {urgentTasks.length > 0 && (
-                        <section className="pb-8">
-                            <div className="flex items-center justify-between mb-5">
-                                <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Urgent Tasks</h2>
-                                <button className="text-primary text-[10px] font-black uppercase tracking-widest bg-primary/5 px-2 py-1 rounded-md">View All</button>
-                            </div>
-                            <div className="space-y-4">
-                                {urgentTasks.map((task) => (
-                                    <div key={task.id} className="group flex items-center p-4 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-                                        <div className="flex-shrink-0 mr-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center text-red-500 shadow-inner">
-                                                <AlertCircle size={22} strokeWidth={2.5} />
-                                            </div>
+                            <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 snap-x snap-mandatory">
+                                {/* Efficiency Card */}
+                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-2 rounded-xl bg-primary/10 dark:bg-primary/20">
+                                            <TrendingUp className="text-primary w-5 h-5" />
                                         </div>
-                                        <div className="flex-grow min-w-0">
-                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">{task.title}</h4>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
-                                                    {task.status || 'NEW'}
-                                                </span>
-                                                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
-                                                <span className="text-[10px] font-black text-red-500 uppercase tracking-tighter bg-red-500/5 px-1.5 rounded">
-                                                    URGENT
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <button className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-primary hover:border-primary group transition-all flex-shrink-0 shadow-sm bg-slate-50 dark:bg-slate-900/50">
-                                            <Check size={18} strokeWidth={3} className="text-slate-400 group-hover:text-white" />
-                                        </button>
+                                        <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                                            +5% <ArrowUp size={10} className="ml-0.5" />
+                                        </span>
                                     </div>
-                                ))}
+                                    <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Efficiency</p>
+                                    <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">84%</p>
+                                </div>
+
+                                {/* Active Tasks Card */}
+                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-orange-500/30">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-500/20">
+                                            <Users className="text-orange-500 w-5 h-5" />
+                                        </div>
+                                        <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                                            NEW <ArrowUp size={10} className="ml-0.5" />
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Active Tasks</p>
+                                    <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{tasks?.length || 0}</p>
+                                </div>
                             </div>
                         </section>
-                    )}
-                </main>
+
+                        {/* Chart Section - Premium Box */}
+                        <section className="bg-white dark:bg-[#0f1325] p-6 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity Flow</h3>
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Revenue Insights</p>
+                                </div>
+                                <button className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
+                                    <MoreHorizontal size={20} />
+                                </button>
+                            </div>
+                            <div className="h-[180px] w-full relative">
+                                <DashboardChart />
+                            </div>
+                        </section>
+
+                        {/* Kanban Section */}
+                        <section>
+                            <h2 className="text-lg font-semibold mb-3 px-1">Pipeline</h2>
+                            <div className="h-[500px] w-full">
+                                {currentWorkspaceId ? <KanbanBoard /> : <div className="flex items-center justify-center p-8 text-gray-400 italic bg-gray-50 dark:bg-card-dark/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">Selecciona un espacio</div>}
+                            </div>
+                        </section>
+
+                        {/* Urgent Tasks Section - High Visibility */}
+                        {urgentTasks.length > 0 && (
+                            <section className="pb-8">
+                                <div className="flex items-center justify-between mb-5">
+                                    <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Urgent Tasks</h2>
+                                    <button className="text-primary text-[10px] font-black uppercase tracking-widest bg-primary/5 px-2 py-1 rounded-md">View All</button>
+                                </div>
+                                <div className="space-y-4">
+                                    {urgentTasks.map((task) => (
+                                        <div key={task.id} className="group flex items-center p-4 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+                                            <div className="flex-shrink-0 mr-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center text-red-500 shadow-inner">
+                                                    <AlertCircle size={22} strokeWidth={2.5} />
+                                                </div>
+                                            </div>
+                                            <div className="flex-grow min-w-0">
+                                                <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">{task.title}</h4>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+                                                        {task.status || 'NEW'}
+                                                    </span>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                                    <span className="text-[10px] font-black text-red-500 uppercase tracking-tighter bg-red-500/5 px-1.5 rounded">
+                                                        URGENT
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <button className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-primary hover:border-primary group transition-all flex-shrink-0 shadow-sm bg-slate-50 dark:bg-slate-900/50">
+                                                <Check size={18} strokeWidth={3} className="text-slate-400 group-hover:text-white" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                    </main>
+                )}
 
                 {/* Bottom Navigation (Floating style from code.html) */}
                 <nav className="absolute bottom-0 w-full bg-background-light/95 dark:bg-card-dark/95 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 pb-8 pt-3 px-6 z-30">
                     <ul className="flex justify-between items-center">
                         <li>
-                            <button className="flex flex-col items-center gap-1 text-primary">
+                            <button className={`flex flex-col items-center gap-1 transition-colors ${activeView === 'home' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-primary'}`}
+                                onClick={() => setActiveView('home')}>
                                 <Home size={22} />
                                 <span className="text-[10px] font-medium">Home</span>
                             </button>
                         </li>
                         <li>
-                            <button className="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary transition-colors">
-                                <PieChart size={22} />
-                                <span className="text-[10px] font-medium">Stats</span>
+                            <button className={`flex flex-col items-center gap-1 transition-colors ${activeView === 'calendar' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-primary'}`}
+                                onClick={() => setActiveView(activeView === 'calendar' ? 'home' : 'calendar')}>
+                                <CalendarDays size={22} />
+                                <span className="text-[10px] font-medium">Calendario</span>
                             </button>
                         </li>
                         <li>

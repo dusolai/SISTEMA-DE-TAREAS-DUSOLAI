@@ -32,8 +32,9 @@ export interface Task {
     ai_extracted?: AiExtractedData;
 
     // --- NUEVOS CAMPOS PARA HISTORIAL ---
-    updated_at?: string; 
-    history?: HistoryEvent[]; 
+    updated_at?: string;
+    history?: HistoryEvent[];
+    scheduled_at?: string | null;
 }
 
 export interface Subtask {
@@ -55,7 +56,7 @@ export interface AiExtractedData {
     suggested_subtasks: Subtask[];
 }
 
-export const KANBAN_COLUMNS: Array<{id: Task['status'], title: string}> = [
+export const KANBAN_COLUMNS: Array<{ id: Task['status'], title: string }> = [
     { id: 'todo', title: 'Por Hacer' },
     { id: 'doing', title: 'En Progreso' },
     { id: 'review', title: 'Revisión' },
