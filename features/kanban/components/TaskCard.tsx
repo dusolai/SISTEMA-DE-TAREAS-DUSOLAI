@@ -104,6 +104,30 @@ const TaskCard: React.FC<Props> = ({ task }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Subtask progress bar */}
+            {task.subtasks && task.subtasks.length > 0 && (() => {
+                const completed = task.subtasks.filter(s => s.completed).length;
+                const total = task.subtasks.length;
+                const pct = Math.round((completed / total) * 100);
+                return (
+                    <div className="mt-3 pt-3 border-t border-gray-50 dark:border-gray-700/50">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{completed}/{total} subtareas</span>
+                            <span className="text-[10px] font-bold text-indigo-500">{pct}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                            <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                    width: `${pct}%`,
+                                    background: pct === 100 ? '#10b981' : pct > 50 ? '#6366f1' : '#f59e0b'
+                                }}
+                            />
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };

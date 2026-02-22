@@ -37,6 +37,7 @@ export interface Task {
     scheduled_at?: string | null;
     notion_url?: string | null;
     drive_url?: string | null;
+    subtasks?: Subtask[];
 }
 
 export interface Subtask {
