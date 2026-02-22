@@ -10,7 +10,7 @@ import { useUIStore } from '../store/uiStore';
 import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
 import useTasks from '../features/kanban/hooks/useTasks';
 import { generateProjectReportData } from '../services/geminiService';
-import { generatePremiumPDF } from '../services/pdfReportService';
+import { generatePremiumHTMLReport } from '../services/htmlReportService';
 import { supabase } from '../services/supabase';
 import {
     LogOut, Sun, Moon, Plus, Loader2, Sparkles, Mic, Home, CalendarDays,
@@ -68,7 +68,7 @@ const Dashboard: React.FC = () => {
         try {
             const wsName = workspaces?.find(w => w.id === currentWorkspaceId)?.name || 'Proyecto';
             const aiData = await generateProjectReportData(tasks, wsName);
-            generatePremiumPDF(tasks, aiData, wsName);
+            generatePremiumHTMLReport(tasks, aiData, wsName);
         } catch (e) {
             console.error('Error generating PDF:', e);
             alert("Error al generar el informe. Inténtalo de nuevo.");
