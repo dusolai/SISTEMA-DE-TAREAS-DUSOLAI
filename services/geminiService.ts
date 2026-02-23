@@ -67,7 +67,7 @@ export const extractTaskFromAudio = async (audioBase64: string, mimeType: string
             contents: { parts: [{ text: createPrompt }, { inlineData: { data: audioBase64, mimeType } }] },
             config: { responseMimeType: 'application/json' }
         });
-        
+
         const rawData = JSON.parse(response.text.trim());
         const suggested_subtasks = (rawData.subtasks_text || []).map((text: string, index: number) => ({
             id: `st-${Date.now()}-${index}`,
@@ -109,16 +109,16 @@ export const generateSubtasksFromText = async (title: string, description: strin
 export const updateTaskWithAudio = async (currentTask: any, audioBase64: string, mimeType: string): Promise<any> => {
     try {
         const fullPrompt = `${updatePrompt} ${JSON.stringify(currentTask)} \n\n Analyze audio, merge info. Return full JSON.`;
-        
+
         const response = await ai.models.generateContent({
             model,
             contents: { parts: [{ text: fullPrompt }, { inlineData: { data: audioBase64, mimeType } }] },
             config: { responseMimeType: 'application/json' }
         });
-        
+
         const updatedData = JSON.parse(response.text.trim());
         if (updatedData.subtasks_text && Array.isArray(updatedData.subtasks_text)) {
-             updatedData.suggested_subtasks = updatedData.subtasks_text.map((text: string, index: number) => ({
+            updatedData.suggested_subtasks = updatedData.subtasks_text.map((text: string, index: number) => ({
                 id: `upd-${Date.now()}-${index}`,
                 text,
                 completed: false
@@ -137,11 +137,14 @@ export const generateProjectReportData = async (tasks: any[], workspaceName: str
         // Enviamos datos clave para que la IA pueda juzgar (antigüedad, subtareas completadas, etc.)
         const simplifiedTasks = tasks.map(t => ({
             title: t.title,
-            description: t.description ? t.description.substring(0, 100) : "Sin descripción", // Recortar para ahorrar tokens
+            description: t.description ? t.description.substring(0, 100) : "Sin descripción",
             status: t.status,
             priority: t.priority,
             days_open: Math.floor((new Date().getTime() - new Date(t.created_at).getTime()) / (1000 * 3600 * 24)),
-            subtasks_completed: `${t.ai_extracted?.suggested_subtasks?.filter((s: any) => s.completed).length || 0}/${t.ai_extracted?.suggested_subtasks?.length || 0}`
+            subtasks_completed: (() => {
+                const subs = t.subtasks || t.ai_extracted?.suggested_subtasks || [];
+                return `${subs.filter((s: any) => s.completed).length}/${subs.length}`;
+            })()
         }));
 
         const fullPrompt = `${reportPrompt} \n Nombre del Proyecto: "${workspaceName}" \n Tareas para auditar: ${JSON.stringify(simplifiedTasks)}`;

@@ -348,7 +348,7 @@ export const generatePremiumHTMLReport = (
         const original = tasks.find(t => t.title === task.original_title) || tasks[i];
         const status = original?.status || 'todo';
         const priority = task.smart_priority || 'Normal';
-        const subtasks = original?.ai_extracted?.suggested_subtasks || [];
+        const subtasks = original?.subtasks || original?.ai_extracted?.suggested_subtasks || [];
 
         return `
                     <tr>

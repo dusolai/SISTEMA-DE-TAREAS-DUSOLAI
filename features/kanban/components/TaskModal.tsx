@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, GitCommit, FileText, Activity, Trash2, Plus, CheckSquare, Square } from 'lucide-react';
+import { X, GitCommit, FileText, Activity, Trash2, Plus, CheckSquare, Square, Sparkles, Loader2 } from 'lucide-react';
 import { useUIStore } from '../../../store/uiStore';
 import useTasks from '../hooks/useTasks';
 import { Task, Subtask } from '../../../types';
+import { generateSubtasksFromText } from '../../../services/geminiService';
 
 const TaskModal: React.FC = () => {
     const { isTaskModalOpen, taskModalData, closeTaskModal } = useUIStore();
@@ -17,6 +18,7 @@ const TaskModal: React.FC = () => {
     const [driveUrl, setDriveUrl] = useState('');
     const [subtasks, setSubtasks] = useState<Subtask[]>([]);
     const [newSubtaskText, setNewSubtaskText] = useState('');
+    const [isGeneratingSubtasks, setIsGeneratingSubtasks] = useState(false);
     const [activeTab, setActiveTab] = useState<'details' | 'subtasks' | 'history'>('details');
 
     useEffect(() => {
@@ -64,6 +66,25 @@ const TaskModal: React.FC = () => {
 
     const handleDeleteSubtask = (id: string) => {
         setSubtasks(subtasks.filter(s => s.id !== id));
+    };
+
+    const handleGenerateAISubtasks = async () => {
+        if (!title.trim()) {
+            alert('Añade un título a la tarea antes de generar subtareas con IA.');
+            return;
+        }
+        setIsGeneratingSubtasks(true);
+        try {
+            const generated = await generateSubtasksFromText(title, description || '');
+            if (generated.length > 0) {
+                setSubtasks(prev => [...prev, ...generated]);
+            }
+        } catch (error) {
+            console.error('Error generating AI subtasks:', error);
+            alert('Error al generar subtareas. Inténtalo de nuevo.');
+        } finally {
+            setIsGeneratingSubtasks(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -218,6 +239,19 @@ const TaskModal: React.FC = () => {
                                 />
                                 <button onClick={handleAddSubtask} className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"><Plus size={16} /></button>
                             </div>
+
+                            {/* AI Generate Button */}
+                            <button
+                                onClick={handleGenerateAISubtasks}
+                                disabled={isGeneratingSubtasks}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border-2 border-dashed border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors text-sm font-medium disabled:opacity-50"
+                            >
+                                {isGeneratingSubtasks ? (
+                                    <><Loader2 size={16} className="animate-spin" /> Generando fases con IA...</>
+                                ) : (
+                                    <><Sparkles size={16} /> Generar Fases con IA</>
+                                )}
+                            </button>
 
                             {/* Subtask list */}
                             <div className="space-y-1">
