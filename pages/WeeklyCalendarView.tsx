@@ -262,15 +262,16 @@ const WeeklyCalendarView: React.FC = () => {
                                                 `}
                                                 onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}
                                             >
-                                                <div className="flex items-center justify-between gap-0.5">
-                                                    <span className="text-[9px] font-bold text-white truncate leading-tight flex-1">
+                                                <div className="flex items-start justify-between gap-1">
+                                                    <span className="text-[9px] font-bold text-white leading-tight flex-1 line-clamp-2">
                                                         {task.title}
                                                     </span>
                                                     <button
-                                                        onClick={(e) => handleUnschedule(task, slotIso, e)}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-white/80 hover:text-white p-1 -mr-1"
+                                                        onClick={(e) => { e.stopPropagation(); handleUnschedule(task, slotIso, e); }}
+                                                        className="flex-shrink-0 text-white/90 hover:text-white p-1.5 -mt-1 -mr-1 bg-black/10 hover:bg-black/20 rounded-bl-lg rounded-tr-md transition-colors"
+                                                        title="Quitar de este horario"
                                                     >
-                                                        <X size={12} strokeWidth={3} />
+                                                        <X size={14} strokeWidth={4} />
                                                     </button>
                                                 </div>
                                                 {/* Workspace label */}
