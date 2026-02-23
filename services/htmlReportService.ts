@@ -195,6 +195,12 @@ export const generatePremiumHTMLReport = (
 
         .audit-text { font-style: italic; color: var(--text-light); font-size: 11px; }
 
+        .task-details { margin-top: 8px; font-size: 11px; color: var(--text-light); border-top: 1px dashed var(--border); padding-top: 8px; }
+        .task-desc { margin: 0 0 6px 0; font-weight: 400; color: var(--text); }
+        .subtasks-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+        .subtasks-list li { background: var(--bg-card); padding: 2px 8px; border-radius: 4px; font-size: 10px; display: flex; alignItems: center; gap: 4px; border: 1px solid var(--border); }
+        .subtasks-list li.completed { background: #d1fae5; color: #065f46; border-color: #34d399; }
+
         footer {
             position: absolute;
             bottom: 20mm;
@@ -342,10 +348,26 @@ export const generatePremiumHTMLReport = (
         const original = tasks.find(t => t.title === task.original_title) || tasks[i];
         const status = original?.status || 'todo';
         const priority = task.smart_priority || 'Normal';
+        const subtasks = original?.ai_extracted?.suggested_subtasks || [];
+
         return `
                     <tr>
                         <td style="color: var(--text-muted); font-weight: 700;">${i + 1}</td>
-                        <td><strong>${cleanText(task.original_title)}</strong></td>
+                        <td>
+                            <strong>${cleanText(task.original_title)}</strong>
+                            ${(original?.description || subtasks.length > 0) ? `
+                                <div class="task-details">
+                                    ${original?.description ? `<p class="task-desc">${cleanText(original.description)}</p>` : ''}
+                                    ${subtasks.length > 0 ? `
+                                        <ul class="subtasks-list">
+                                            ${subtasks.map((s: any) => `
+                                                <li class="${s.completed ? 'completed' : ''}">${s.completed ? '✓' : '○'} ${cleanText(s.text)}</li>
+                                            `).join('')}
+                                        </ul>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        </td>
                         <td><span class="badge ${status}">${status === 'todo' ? 'Por hacer' : status === 'doing' ? 'Haciendo' : status === 'review' ? 'Revisión' : 'Hecho'}</span></td>
                         <td><span class="badge-prio ${priority.toLowerCase() === 'crítica' || priority === 'high' ? 'high' : priority.toLowerCase() === 'normal' || priority === 'medium' ? 'medium' : 'low'}">${priority.toUpperCase()}</span></td>
                         <td class="audit-text">${cleanText(task.ai_audit)}</td>
