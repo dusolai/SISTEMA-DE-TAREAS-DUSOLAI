@@ -11,12 +11,13 @@ import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
 import useTasks from '../features/kanban/hooks/useTasks';
 import { generateProjectReportData } from '../services/geminiService';
 import { generatePremiumHTMLReport } from '../services/htmlReportService';
+import { generateBulkReportsZip } from '../services/bulkReportService';
 import { supabase } from '../services/supabase';
 import {
     LogOut, Sun, Moon, Plus, Loader2, Sparkles, Mic, Home, CalendarDays,
     FolderOpen, User as UserIcon, Check, MoreHorizontal, ArrowUp,
     Users, TrendingUp, AlertCircle, ChevronDown, ChevronUp,
-    Download, LayoutDashboard, Clock
+    Download, LayoutDashboard, Clock, FileArchive
 } from 'lucide-react';
 
 // JS-based media query hook (reliable regardless of Tailwind version)
@@ -42,6 +43,8 @@ const Dashboard: React.FC = () => {
     const [desktopTab, setDesktopTab] = useState<'kanban' | 'calendar'>('kanban');
     const [isChartCollapsed, setIsChartCollapsed] = useState(false);
     const [isUrgentExpanded, setIsUrgentExpanded] = useState(false);
+    const [isBulkGenerating, setIsBulkGenerating] = useState(false);
+    const [bulkProgress, setBulkProgress] = useState({ percent: 0, name: '' });
     const isDesktop = useIsDesktop();
 
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
@@ -77,6 +80,24 @@ const Dashboard: React.FC = () => {
             alert("Error al generar el informe. Inténtalo de nuevo.");
         } finally {
             setIsGeneratingReport(false);
+        }
+    };
+
+    const handleBulkReport = async () => {
+        if (!workspaces || workspaces.length === 0) { alert('No hay workspaces disponibles.'); return; }
+        if (isBulkGenerating) return;
+        setIsBulkGenerating(true);
+        setBulkProgress({ percent: 0, name: '' });
+        try {
+            await generateBulkReportsZip(workspaces, (percent, name) => {
+                setBulkProgress({ percent, name });
+            });
+        } catch (e) {
+            console.error('Error generating bulk reports:', e);
+            alert('Error al generar los informes. Inténtalo de nuevo.');
+        } finally {
+            setIsBulkGenerating(false);
+            setBulkProgress({ percent: 0, name: '' });
         }
     };
 
@@ -156,6 +177,19 @@ const Dashboard: React.FC = () => {
                         >
                             <Download size={18} /> Descargar APK
                         </a>
+
+                        {/* Bulk Report ZIP Download */}
+                        <button
+                            onClick={handleBulkReport}
+                            disabled={isBulkGenerating}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: isBulkGenerating ? '#94a3b8' : '#f59e0b', color: 'white', fontWeight: 700, fontSize: 14, border: 'none', cursor: isBulkGenerating ? 'wait' : 'pointer', boxShadow: '0 4px 12px rgba(245,158,11,0.2)', boxSizing: 'border-box', transition: 'all 0.2s' }}
+                        >
+                            {isBulkGenerating ? (
+                                <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> {bulkProgress.percent}% — {bulkProgress.name}</>
+                            ) : (
+                                <><FileArchive size={18} /> ZIP Todos los Informes</>
+                            )}
+                        </button>
 
                         <div style={{ display: 'flex', gap: 4, paddingTop: 8 }}>
                             <button onClick={toggleTheme} style={{ flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', background: theme === 'dark' ? '#1e293b' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -322,14 +356,33 @@ const Dashboard: React.FC = () => {
                         <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                             {theme === 'dark' ? <Sun size={20} className="text-gray-300" /> : <Moon size={20} className="text-gray-600" />}
                         </button>
-                        <button onClick={handleGeneratePDF} disabled={isGeneratingReport} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        <button onClick={handleGeneratePDF} disabled={isGeneratingReport} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Informe IA (workspace actual)">
                             {isGeneratingReport ? <Loader2 className="animate-spin text-primary" size={20} /> : <Sparkles className="text-primary" size={20} />}
+                        </button>
+                        <button onClick={handleBulkReport} disabled={isBulkGenerating} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="ZIP Todos los Informes">
+                            {isBulkGenerating ? <Loader2 className="animate-spin text-amber-500" size={20} /> : <FileArchive className="text-amber-500" size={20} />}
                         </button>
                         <button onClick={() => supabase.auth.signOut()} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                             <LogOut size={20} className="text-red-500" />
                         </button>
                     </div>
                 </header>
+
+                {/* Bulk Report Progress Banner — Mobile */}
+                {isBulkGenerating && (
+                    <div className="flex-shrink-0 px-5 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800/30">
+                        <div className="flex items-center gap-3">
+                            <Loader2 size={16} className="animate-spin text-amber-600" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Generando informes... {bulkProgress.percent}%</p>
+                                <p className="text-[10px] text-amber-500 truncate">{bulkProgress.name}</p>
+                            </div>
+                        </div>
+                        <div className="mt-2 w-full bg-amber-200 dark:bg-amber-800 rounded-full h-1.5 overflow-hidden">
+                            <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${bulkProgress.percent}%` }} />
+                        </div>
+                    </div>
+                )}
 
                 {/* Content */}
                 {activeView === 'calendar' ? (

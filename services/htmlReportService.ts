@@ -8,11 +8,11 @@ import { Task } from '../types';
 const cleanText = (text: any): string =>
     text ? String(text).replace(/[^\x20-\x7E\xA0-\xFF\u00C0-\u024F\u20AC\n\r¿¡áéíóúñÁÉÍÓÚÑ]/g, '').trim() : '';
 
-export const generatePremiumHTMLReport = (
+export const generatePremiumHTMLString = (
     tasks: Task[],
     aiData: any,
     workspaceName: string
-): void => {
+): string => {
     const byStatus = {
         todo: tasks.filter(t => t.status === 'todo').length,
         doing: tasks.filter(t => t.status === 'doing').length,
@@ -386,6 +386,15 @@ export const generatePremiumHTMLReport = (
 </html>
     `;
 
+    return htmlContent;
+};
+
+export const generatePremiumHTMLReport = (
+    tasks: Task[],
+    aiData: any,
+    workspaceName: string
+): void => {
+    const htmlContent = generatePremiumHTMLString(tasks, aiData, workspaceName);
     const printWindow = window.open('', '_blank');
     if (printWindow) {
         printWindow.document.write(htmlContent);
