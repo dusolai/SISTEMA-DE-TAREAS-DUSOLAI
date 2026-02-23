@@ -35,6 +35,7 @@ export interface Task {
     updated_at?: string;
     history?: HistoryEvent[];
     scheduled_at?: string | null;
+    scheduled_slots?: string[]; // Array of ISO strings for multi-hour scheduling
     notion_url?: string | null;
     drive_url?: string | null;
     subtasks?: Subtask[];

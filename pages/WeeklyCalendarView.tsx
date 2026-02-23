@@ -1,16 +1,38 @@
-import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, X, CalendarDays } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, X, CalendarDays, Layers } from 'lucide-react';
 import useTasks from '../features/kanban/hooks/useTasks';
+import { useWorkspaces } from '../features/kanban/hooks/useWorkspaces';
 import { useUIStore } from '../store/uiStore';
 import { Task } from '../types';
+import { supabase } from '../services/supabase';
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7am to 10pm
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
+// Workspace color palette
+const WS_COLORS = [
+    { bg: 'bg-violet-500', text: 'text-violet-700 dark:text-violet-300', pill: 'bg-violet-100 dark:bg-violet-900/40' },
+    { bg: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', pill: 'bg-blue-100 dark:bg-blue-900/40' },
+    { bg: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-300', pill: 'bg-emerald-100 dark:bg-emerald-900/40' },
+    { bg: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-300', pill: 'bg-amber-100 dark:bg-amber-900/40' },
+    { bg: 'bg-rose-500', text: 'text-rose-700 dark:text-rose-300', pill: 'bg-rose-100 dark:bg-rose-900/40' },
+    { bg: 'bg-cyan-500', text: 'text-cyan-700 dark:text-cyan-300', pill: 'bg-cyan-100 dark:bg-cyan-900/40' },
+    { bg: 'bg-pink-500', text: 'text-pink-700 dark:text-pink-300', pill: 'bg-pink-100 dark:bg-pink-900/40' },
+    { bg: 'bg-orange-500', text: 'text-orange-700 dark:text-orange-300', pill: 'bg-orange-100 dark:bg-orange-900/40' },
+    { bg: 'bg-teal-500', text: 'text-teal-700 dark:text-teal-300', pill: 'bg-teal-100 dark:bg-teal-900/40' },
+    { bg: 'bg-indigo-500', text: 'text-indigo-700 dark:text-indigo-300', pill: 'bg-indigo-100 dark:bg-indigo-900/40' },
+];
+
+const PRIORITY_COLORS: Record<string, string> = {
+    high: 'bg-red-500',
+    medium: 'bg-amber-400',
+    low: 'bg-emerald-500',
+};
+
 function getWeekStart(date: Date): Date {
     const d = new Date(date);
-    const day = d.getDay(); // 0=Sun, 1=Mon ...
-    const diff = (day === 0 ? -6 : 1 - day); // adjust to Monday
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
     d.setDate(d.getDate() + diff);
     d.setHours(0, 0, 0, 0);
     return d;
@@ -27,65 +49,119 @@ function formatMonthRange(start: Date, end: Date): string {
     return `${start.toLocaleDateString('es-ES', opts)} – ${end.toLocaleDateString('es-ES', { ...opts, year: 'numeric' })}`;
 }
 
-const PRIORITY_COLORS: Record<string, string> = {
-    high: 'bg-red-500',
-    medium: 'bg-amber-400',
-    low: 'bg-emerald-500',
-};
+// Get all schedule slots from a task (with backward compatibility)
+function getTaskSlots(task: Task): string[] {
+    if (task.scheduled_slots && task.scheduled_slots.length > 0) return task.scheduled_slots;
+    if (task.scheduled_at) return [task.scheduled_at];
+    return [];
+}
 
 const WeeklyCalendarView: React.FC = () => {
-    const { tasks, scheduleTask } = useTasks();
-    const { currentWorkspaceId } = useUIStore();
+    const { addScheduleSlot, removeScheduleSlot } = useTasks();
+    const { workspaces } = useWorkspaces();
+    const { theme } = useUIStore();
     const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [allTasks, setAllTasks] = useState<Task[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch ALL tasks from ALL workspaces
+    useEffect(() => {
+        const fetchAll = async () => {
+            setIsLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                setAllTasks(data || []);
+            } catch (e) {
+                console.error('Error fetching all tasks for calendar:', e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAll();
+    }, []);
+
+    // Map workspace id to name + color
+    const wsMap = useMemo(() => {
+        const map: Record<string, { name: string; colorIdx: number }> = {};
+        (workspaces || []).forEach((ws, idx) => {
+            map[ws.id] = { name: ws.name, colorIdx: idx % WS_COLORS.length };
+        });
+        return map;
+    }, [workspaces]);
 
     const weekDays = useMemo(() =>
         Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
         [weekStart]
     );
 
-    const workspaceTasks = useMemo(() =>
-        tasks.filter(t => !currentWorkspaceId || t.workspace_id === currentWorkspaceId),
-        [tasks, currentWorkspaceId]
-    );
-
-    const scheduledTasks = useMemo(() => {
-        const map: Record<string, Task[]> = {};
-        workspaceTasks.forEach(t => {
-            if (!t.scheduled_at) return;
-            const d = new Date(t.scheduled_at);
-            // Only show if task is in this week
-            const dayIdx = weekDays.findIndex(wd =>
-                wd.toDateString() === new Date(d.toDateString()).toDateString()
-            );
-            if (dayIdx === -1) return;
-            const hour = d.getHours();
-            const key = `${dayIdx}-${hour}`;
-            map[key] = map[key] ? [...map[key], t] : [t];
+    // Build map: "dayIdx-hour" => { task, slotIso }[]
+    const scheduledMap = useMemo(() => {
+        const map: Record<string, { task: Task; slotIso: string }[]> = {};
+        allTasks.forEach(t => {
+            const slots = getTaskSlots(t);
+            slots.forEach(slot => {
+                const d = new Date(slot);
+                const dayIdx = weekDays.findIndex(wd =>
+                    wd.toDateString() === new Date(d.toDateString()).toDateString()
+                );
+                if (dayIdx === -1) return;
+                const hour = d.getHours();
+                const key = `${dayIdx}-${hour}`;
+                if (!map[key]) map[key] = [];
+                map[key].push({ task: t, slotIso: slot });
+            });
         });
         return map;
-    }, [workspaceTasks, weekDays]);
+    }, [allTasks, weekDays]);
 
     const unscheduledTasks = useMemo(() =>
-        workspaceTasks.filter(t => !t.scheduled_at),
-        [workspaceTasks]
+        allTasks.filter(t => getTaskSlots(t).length === 0),
+        [allTasks]
     );
 
-    const handleSlotClick = (dayIdx: number, hour: number) => {
+    const handleSlotClick = async (dayIdx: number, hour: number) => {
         if (!selectedTask) return;
         const d = new Date(weekDays[dayIdx]);
         d.setHours(hour, 0, 0, 0);
-        scheduleTask(selectedTask.id, d.toISOString());
-        setSelectedTask(null);
+        const iso = d.toISOString();
+
+        await addScheduleSlot(selectedTask.id, iso);
+
+        // Update local state
+        setAllTasks(prev => prev.map(t =>
+            t.id === selectedTask.id
+                ? { ...t, scheduled_slots: [...(getTaskSlots(t)), iso] }
+                : t
+        ));
+
+        // Don't deselect — allow placing in multiple slots
     };
 
-    const handleUnschedule = (task: Task, e: React.MouseEvent) => {
+    const handleUnschedule = async (task: Task, slotIso: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        scheduleTask(task.id, null);
+        await removeScheduleSlot(task.id, slotIso);
+
+        // Update local state
+        setAllTasks(prev => prev.map(t =>
+            t.id === task.id
+                ? { ...t, scheduled_slots: getTaskSlots(t).filter(s => s !== slotIso) }
+                : t
+        ));
     };
 
     const prevWeek = () => setWeekStart(prev => addDays(prev, -7));
     const nextWeek = () => setWeekStart(prev => addDays(prev, 7));
+
+    const getWsInfo = (wsId?: string) => {
+        if (!wsId || !wsMap[wsId]) return { name: '?', color: WS_COLORS[0] };
+        const info = wsMap[wsId];
+        return { name: info.name, color: WS_COLORS[info.colorIdx] };
+    };
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -96,7 +172,12 @@ const WeeklyCalendarView: React.FC = () => {
                         <ChevronLeft size={18} className="text-slate-600 dark:text-slate-300" />
                     </button>
                     <div className="text-center">
-                        <p className="text-xs font-bold text-primary uppercase tracking-widest">Semana</p>
+                        <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                            <Layers size={12} className="text-primary" />
+                            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                                Todos los Workspaces
+                            </p>
+                        </div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white">
                             {formatMonthRange(weekStart, addDays(weekStart, 6))}
                         </p>
@@ -110,11 +191,14 @@ const WeeklyCalendarView: React.FC = () => {
             {/* Selected task indicator */}
             {selectedTask && (
                 <div className="flex-shrink-0 mx-4 mt-2 p-2.5 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between">
-                    <p className="text-xs font-bold text-primary truncate flex-1 mr-2">
-                        📌 Selecciona un slot para: <span className="font-black">{selectedTask.title}</span>
-                    </p>
-                    <button onClick={() => setSelectedTask(null)} className="flex-shrink-0 text-primary hover:text-red-500 transition-colors">
-                        <X size={16} />
+                    <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
+                        <p className="text-xs font-bold text-primary truncate">
+                            📌 Haz click en los slots donde quieras planificar:
+                        </p>
+                        <span className="text-xs font-black text-primary truncate">{selectedTask.title}</span>
+                    </div>
+                    <button onClick={() => setSelectedTask(null)} className="flex-shrink-0 px-2 py-1 rounded-lg bg-primary text-white text-[10px] font-bold hover:bg-primary/80 transition-colors">
+                        Listo
                     </button>
                 </div>
             )}
@@ -139,6 +223,13 @@ const WeeklyCalendarView: React.FC = () => {
                     })}
                 </div>
 
+                {/* Loading */}
+                {isLoading && (
+                    <div className="flex items-center justify-center py-8 text-slate-400">
+                        <span className="text-sm font-bold">Cargando tareas...</span>
+                    </div>
+                )}
+
                 {/* Hour rows */}
                 {HOURS.map(hour => (
                     <div key={hour} className="flex min-h-[56px]">
@@ -151,7 +242,7 @@ const WeeklyCalendarView: React.FC = () => {
                         {/* Day cells */}
                         {weekDays.map((_, dayIdx) => {
                             const key = `${dayIdx}-${hour}`;
-                            const slotTasks = scheduledTasks[key] || [];
+                            const slotEntries = scheduledMap[key] || [];
                             const isHighlighted = selectedTask !== null;
                             return (
                                 <div
@@ -161,25 +252,34 @@ const WeeklyCalendarView: React.FC = () => {
                                         ${isHighlighted ? 'cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/20' : ''}
                                     `}
                                 >
-                                    {slotTasks.map(task => (
-                                        <div
-                                            key={task.id}
-                                            className={`group w-full rounded-md px-1 py-0.5 mb-0.5 flex items-center justify-between gap-0.5 cursor-pointer shadow-sm
-                                                ${PRIORITY_COLORS[task.priority] || 'bg-slate-400'}
-                                            `}
-                                            onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}
-                                        >
-                                            <span className="text-[9px] font-bold text-white truncate leading-tight">
-                                                {task.title}
-                                            </span>
-                                            <button
-                                                onClick={(e) => handleUnschedule(task, e)}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-white/80 hover:text-white"
+                                    {slotEntries.map(({ task, slotIso }) => {
+                                        const ws = getWsInfo(task.workspace_id);
+                                        return (
+                                            <div
+                                                key={`${task.id}-${slotIso}`}
+                                                className={`group w-full rounded-md px-1 py-0.5 mb-0.5 cursor-pointer shadow-sm
+                                                    ${PRIORITY_COLORS[task.priority] || 'bg-slate-400'}
+                                                `}
+                                                onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}
                                             >
-                                                <X size={10} />
-                                            </button>
-                                        </div>
-                                    ))}
+                                                <div className="flex items-center justify-between gap-0.5">
+                                                    <span className="text-[9px] font-bold text-white truncate leading-tight flex-1">
+                                                        {task.title}
+                                                    </span>
+                                                    <button
+                                                        onClick={(e) => handleUnschedule(task, slotIso, e)}
+                                                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-white/80 hover:text-white"
+                                                    >
+                                                        <X size={10} />
+                                                    </button>
+                                                </div>
+                                                {/* Workspace label */}
+                                                <span className="text-[7px] font-black text-white/80 uppercase tracking-wider leading-none">
+                                                    {ws.name}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             );
                         })}
@@ -200,20 +300,34 @@ const WeeklyCalendarView: React.FC = () => {
                         </div>
                     ) : (
                         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3">
-                            {unscheduledTasks.map(task => (
-                                <button
-                                    key={task.id}
-                                    onClick={() => setSelectedTask(selectedTask?.id === task.id ? null : task)}
-                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 transition-all text-xs font-bold shadow-sm
-                                        ${selectedTask?.id === task.id
-                                            ? 'border-primary bg-primary text-white shadow-primary/30 scale-[1.05]'
-                                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200'}
-                                    `}
-                                >
-                                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_COLORS[task.priority]}`} />
-                                    <span className="max-w-[100px] truncate">{task.title}</span>
-                                </button>
-                            ))}
+                            {unscheduledTasks.map(task => {
+                                const ws = getWsInfo(task.workspace_id);
+                                return (
+                                    <button
+                                        key={task.id}
+                                        onClick={() => setSelectedTask(selectedTask?.id === task.id ? null : task)}
+                                        className={`flex-shrink-0 flex flex-col items-start gap-0.5 px-3 py-1.5 rounded-xl border-2 transition-all text-xs font-bold shadow-sm
+                                            ${selectedTask?.id === task.id
+                                                ? 'border-primary bg-primary text-white shadow-primary/30 scale-[1.05]'
+                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200'}
+                                        `}
+                                    >
+                                        <div className="flex items-center gap-1.5">
+                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_COLORS[task.priority]}`} />
+                                            <span className="max-w-[100px] truncate">{task.title}</span>
+                                        </div>
+                                        {/* Workspace badge */}
+                                        <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md leading-none
+                                            ${selectedTask?.id === task.id
+                                                ? 'bg-white/20 text-white/90'
+                                                : `${ws.color.pill} ${ws.color.text}`
+                                            }
+                                        `}>
+                                            {ws.name}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

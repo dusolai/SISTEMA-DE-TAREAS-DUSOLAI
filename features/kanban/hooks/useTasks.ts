@@ -7,10 +7,13 @@ interface TasksState {
     tasks: Task[];
     isLoading: boolean;
     fetchTasks: (workspaceId: string) => Promise<void>;
+    fetchAllTasks: () => Promise<Task[]>;
     createTask: (task: Omit<Task, 'id' | 'created_at' | 'history' | 'updated_at'>) => Promise<boolean>;
     updateTask: (id: string, updates: Partial<Task>) => Promise<boolean>;
     deleteTask: (id: string) => Promise<void>;
     scheduleTask: (id: string, scheduledAt: string | null) => Promise<void>;
+    addScheduleSlot: (id: string, isoString: string) => Promise<void>;
+    removeScheduleSlot: (id: string, isoString: string) => Promise<void>;
 }
 
 const generateCommitMessage = (updates: Partial<Task>, oldTask?: Task): string => {
@@ -151,6 +154,46 @@ const useTasks = create<TasksState>((set, get) => ({
             ),
         }));
         await supabase.from('tasks').update({ scheduled_at: scheduledAt }).eq('id', id);
+    },
+
+    fetchAllTasks: async () => {
+        try {
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Error fetching all tasks:', error);
+            return [];
+        }
+    },
+
+    addScheduleSlot: async (id, isoString) => {
+        const task = get().tasks.find(t => t.id === id);
+        const currentSlots = task?.scheduled_slots || (task?.scheduled_at ? [task.scheduled_at] : []);
+        // Don't duplicate
+        if (currentSlots.includes(isoString)) return;
+        const newSlots = [...currentSlots, isoString];
+        set((state) => ({
+            tasks: state.tasks.map((t) =>
+                t.id === id ? { ...t, scheduled_slots: newSlots, scheduled_at: newSlots[0] || null } : t
+            ),
+        }));
+        await supabase.from('tasks').update({ scheduled_slots: newSlots, scheduled_at: newSlots[0] || null }).eq('id', id);
+    },
+
+    removeScheduleSlot: async (id, isoString) => {
+        const task = get().tasks.find(t => t.id === id);
+        const currentSlots = task?.scheduled_slots || (task?.scheduled_at ? [task.scheduled_at] : []);
+        const newSlots = currentSlots.filter(s => s !== isoString);
+        set((state) => ({
+            tasks: state.tasks.map((t) =>
+                t.id === id ? { ...t, scheduled_slots: newSlots, scheduled_at: newSlots[0] || null } : t
+            ),
+        }));
+        await supabase.from('tasks').update({ scheduled_slots: newSlots, scheduled_at: newSlots[0] || null }).eq('id', id);
     },
 }));
 
