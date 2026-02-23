@@ -15,8 +15,8 @@ import { supabase } from '../services/supabase';
 import {
     LogOut, Sun, Moon, Plus, Loader2, Sparkles, Mic, Home, CalendarDays,
     FolderOpen, User as UserIcon, Check, MoreHorizontal, ArrowUp,
-    Users, TrendingUp, AlertCircle, ChevronDown,
-    Download, LayoutDashboard
+    Users, TrendingUp, AlertCircle, ChevronDown, ChevronUp,
+    Download, LayoutDashboard, Clock
 } from 'lucide-react';
 
 // JS-based media query hook (reliable regardless of Tailwind version)
@@ -40,6 +40,8 @@ const Dashboard: React.FC = () => {
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     const [activeView, setActiveView] = useState<'home' | 'calendar'>('home');
     const [desktopTab, setDesktopTab] = useState<'kanban' | 'calendar'>('kanban');
+    const [isChartCollapsed, setIsChartCollapsed] = useState(false);
+    const [isUrgentExpanded, setIsUrgentExpanded] = useState(false);
     const isDesktop = useIsDesktop();
 
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
@@ -360,16 +362,25 @@ const Dashboard: React.FC = () => {
                             </div>
                         </section>
 
-                        {/* Chart */}
-                        <section className="bg-white dark:bg-[#0f1325] p-6 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none">
-                            <div className="flex justify-between items-center mb-6">
+                        {/* Chart — Collapsible */}
+                        <section className="bg-white dark:bg-[#0f1325] rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none overflow-hidden transition-all duration-300">
+                            <button
+                                onClick={() => setIsChartCollapsed(!isChartCollapsed)}
+                                className="w-full flex justify-between items-center p-6 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                            >
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity Flow</h3>
-                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Task Insights</p>
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white text-left">Activity Flow</h3>
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold text-left">Task Insights</p>
                                 </div>
-                                <button className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors"><MoreHorizontal size={20} /></button>
+                                <div className={`p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 transition-transform duration-300 ${isChartCollapsed ? '' : 'rotate-180'}`}>
+                                    <ChevronUp size={20} />
+                                </div>
+                            </button>
+                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isChartCollapsed ? 'max-h-0 opacity-0' : 'max-h-[250px] opacity-100'}`}>
+                                <div className="px-6 pb-6">
+                                    <div className="h-[180px] w-full relative"><DashboardChart tasks={tasks} /></div>
+                                </div>
                             </div>
-                            <div className="h-[180px] w-full relative"><DashboardChart tasks={tasks} /></div>
                         </section>
 
                         {/* Kanban */}
@@ -380,32 +391,116 @@ const Dashboard: React.FC = () => {
                             </div>
                         </section>
 
-                        {/* Urgent Tasks */}
-                        {urgentTasks.length > 0 && (
+                        {/* Urgent Tasks — Expandable Premium */}
+                        {(tasks?.filter(t => t.priority === 'high').length || 0) > 0 && (
                             <section className="pb-8">
-                                <div className="flex items-center justify-between mb-5">
-                                    <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Urgent Tasks</h2>
-                                </div>
-                                <div className="space-y-4">
-                                    {urgentTasks.map((task) => (
-                                        <div key={task.id} className="group flex items-center p-4 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-                                            <div className="flex-shrink-0 mr-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center text-red-500 shadow-inner"><AlertCircle size={22} strokeWidth={2.5} /></div>
-                                            </div>
-                                            <div className="flex-grow min-w-0">
-                                                <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">{task.title}</h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{task.status || 'NEW'}</span>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
-                                                    <span className="text-[10px] font-black text-red-500 uppercase tracking-tighter bg-red-500/5 px-1.5 rounded">URGENT</span>
-                                                </div>
-                                            </div>
-                                            <button className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-primary hover:border-primary group transition-all flex-shrink-0 shadow-sm bg-slate-50 dark:bg-slate-900/50">
-                                                <Check size={18} strokeWidth={3} className="text-slate-400 group-hover:text-white" />
-                                            </button>
+                                <button
+                                    onClick={() => setIsUrgentExpanded(!isUrgentExpanded)}
+                                    className="w-full flex items-center justify-between mb-4 cursor-pointer group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-xl bg-red-500/10">
+                                            <AlertCircle size={18} className="text-red-500" />
                                         </div>
-                                    ))}
-                                </div>
+                                        <div className="text-left">
+                                            <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">Urgentes</h2>
+                                            <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest">
+                                                {tasks?.filter(t => t.priority === 'high').length} tareas críticas
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 transition-transform duration-300 ${isUrgentExpanded ? 'rotate-180' : ''}`}>
+                                        <ChevronDown size={18} />
+                                    </div>
+                                </button>
+
+                                {/* Preview — always visible (first 2 tasks, compact) */}
+                                {!isUrgentExpanded && (
+                                    <div className="space-y-2">
+                                        {(tasks?.filter(t => t.priority === 'high').slice(0, 2) || []).map((task) => (
+                                            <div key={task.id}
+                                                onClick={() => openTaskModal(task)}
+                                                className="flex items-center gap-3 p-3 rounded-2xl bg-red-50/50 dark:bg-red-500/5 border border-red-100 dark:border-red-900/30 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                                            >
+                                                <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                                                    <AlertCircle size={14} className="text-red-500" />
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{task.title}</span>
+                                            </div>
+                                        ))}
+                                        {(tasks?.filter(t => t.priority === 'high').length || 0) > 2 && (
+                                            <p className="text-center text-xs text-slate-400 font-medium pt-1">
+                                                +{(tasks?.filter(t => t.priority === 'high').length || 0) - 2} más — toca para expandir
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Expanded — full detail cards */}
+                                {isUrgentExpanded && (
+                                    <div className="space-y-3">
+                                        {(tasks?.filter(t => t.priority === 'high') || []).map((task) => {
+                                            const subtasks = task.subtasks || task.ai_extracted?.suggested_subtasks || [];
+                                            const completedSubs = subtasks.filter((s: any) => s.completed).length;
+                                            const subProgress = subtasks.length > 0 ? Math.round((completedSubs / subtasks.length) * 100) : 0;
+                                            const statusLabel = task.status === 'todo' ? 'Por hacer' : task.status === 'doing' ? 'En progreso' : task.status === 'review' ? 'Revisión' : 'Hecho';
+                                            const statusColor = task.status === 'done' ? '#10b981' : task.status === 'doing' ? '#3b82f6' : task.status === 'review' ? '#f59e0b' : '#94a3b8';
+
+                                            return (
+                                                <div key={task.id}
+                                                    onClick={() => openTaskModal(task)}
+                                                    className="p-4 rounded-2xl bg-white dark:bg-[#0f1325] border border-red-100 dark:border-red-900/30 shadow-sm hover:shadow-lg transition-all cursor-pointer active:scale-[0.98] space-y-3"
+                                                >
+                                                    {/* Header */}
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{task.title}</h4>
+                                                            {task.description && (
+                                                                <p className="text-xs text-slate-400 mt-1 line-clamp-2">{task.description}</p>
+                                                            )}
+                                                        </div>
+                                                        <span
+                                                            className="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg flex-shrink-0"
+                                                            style={{ background: `${statusColor}15`, color: statusColor }}
+                                                        >
+                                                            {statusLabel}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Subtask progress bar */}
+                                                    {subtasks.length > 0 && (
+                                                        <div>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fases</span>
+                                                                <span className="text-[10px] font-bold" style={{ color: subProgress === 100 ? '#10b981' : '#5848e8' }}>{completedSubs}/{subtasks.length}</span>
+                                                            </div>
+                                                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                                <div
+                                                                    className="h-full rounded-full transition-all duration-500"
+                                                                    style={{
+                                                                        width: `${subProgress}%`,
+                                                                        background: subProgress === 100 ? '#10b981' : 'linear-gradient(90deg, #5848e8, #8b5cf6)'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Footer meta */}
+                                                    <div className="flex items-center gap-3 pt-1">
+                                                        <div className="flex items-center gap-1 text-slate-400">
+                                                            <Clock size={10} />
+                                                            <span className="text-[10px] font-medium">
+                                                                {new Date(task.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-[9px] font-black text-red-500 uppercase tracking-wider bg-red-500/5 px-1.5 py-0.5 rounded">URGENTE</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </section>
                         )}
                     </main>
