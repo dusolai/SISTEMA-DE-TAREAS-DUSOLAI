@@ -336,48 +336,64 @@ const Dashboard: React.FC = () => {
                     <div className="flex-1 overflow-hidden flex flex-col"><WeeklyCalendarView /></div>
                 ) : (
                     <main className="flex-1 overflow-y-auto px-5 pt-6 space-y-6 pb-32 no-scrollbar">
-                        {/* Stats Cards */}
+                        {/* Analytics Panel — Fully Collapsible */}
                         <section>
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Performance</h2>
-                                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">LIVE STATS</span>
-                            </div>
-                            <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 snap-x snap-mandatory">
-                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="p-2 rounded-xl bg-primary/10 dark:bg-primary/20"><TrendingUp className="text-primary w-5 h-5" /></div>
-                                        <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">+5% <ArrowUp size={10} className="ml-0.5" /></span>
-                                    </div>
-                                    <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Efficiency</p>
-                                    <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{completionRate}%</p>
-                                </div>
-                                <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-500/20"><Users className="text-orange-500 w-5 h-5" /></div>
-                                        <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">NEW <ArrowUp size={10} className="ml-0.5" /></span>
-                                    </div>
-                                    <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Active Tasks</p>
-                                    <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{totalTasks}</p>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* Chart — Collapsible */}
-                        <section className="bg-white dark:bg-[#0f1325] rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none overflow-hidden transition-all duration-300">
+                            {/* Toggle Header — Very Prominent */}
                             <button
                                 onClick={() => setIsChartCollapsed(!isChartCollapsed)}
-                                className="w-full flex justify-between items-center p-6 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                                className="w-full flex items-center justify-between mb-4 active:scale-[0.98] transition-transform"
                             >
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white text-left">Activity Flow</h3>
-                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold text-left">Task Insights</p>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-xl bg-primary/10">
+                                        <TrendingUp className="text-primary w-5 h-5" />
+                                    </div>
+                                    <div className="text-left">
+                                        <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Análisis</h2>
+                                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                                            {isChartCollapsed ? 'Toca para mostrar' : 'Toca para ocultar'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className={`p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 transition-transform duration-300 ${isChartCollapsed ? '' : 'rotate-180'}`}>
-                                    <ChevronUp size={20} />
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">LIVE</span>
+                                    <div className={`p-2.5 rounded-xl bg-primary/10 text-primary transition-transform duration-300 ${isChartCollapsed ? 'rotate-180' : ''}`}>
+                                        <ChevronUp size={20} strokeWidth={3} />
+                                    </div>
                                 </div>
                             </button>
-                            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isChartCollapsed ? 'max-h-0 opacity-0' : 'max-h-[250px] opacity-100'}`}>
-                                <div className="px-6 pb-6">
+
+                            {/* Collapsible Content */}
+                            <div className={`transition-all duration-400 ease-in-out overflow-hidden ${isChartCollapsed ? 'max-h-0 opacity-0' : 'max-h-[600px] opacity-100'}`}>
+                                {/* Stats Cards */}
+                                <div className="flex overflow-x-auto gap-4 no-scrollbar pb-4 snap-x snap-mandatory">
+                                    <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="p-2 rounded-xl bg-primary/10 dark:bg-primary/20"><TrendingUp className="text-primary w-5 h-5" /></div>
+                                            <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">+5% <ArrowUp size={10} className="ml-0.5" /></span>
+                                        </div>
+                                        <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Eficiencia</p>
+                                        <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{completionRate}%</p>
+                                    </div>
+                                    <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-500/20"><Users className="text-orange-500 w-5 h-5" /></div>
+                                            <span className="text-[11px] font-black text-emerald-500 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded-md">NEW <ArrowUp size={10} className="ml-0.5" /></span>
+                                        </div>
+                                        <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Activas</p>
+                                        <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{totalTasks}</p>
+                                    </div>
+                                    <div className="snap-center shrink-0 w-[160px] p-5 rounded-2xl bg-white dark:bg-[#0f1325] border border-slate-100 dark:border-slate-800 shadow-sm">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-500/20"><Check className="text-emerald-500 w-5 h-5" /></div>
+                                        </div>
+                                        <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Hechas</p>
+                                        <p className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{doneTasks}</p>
+                                    </div>
+                                </div>
+
+                                {/* Chart */}
+                                <div className="bg-white dark:bg-[#0f1325] p-6 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none">
+                                    <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Activity Flow</h3>
                                     <div className="h-[180px] w-full relative"><DashboardChart tasks={tasks} /></div>
                                 </div>
                             </div>
