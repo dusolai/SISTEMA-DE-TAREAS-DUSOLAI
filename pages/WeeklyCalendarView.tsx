@@ -59,7 +59,7 @@ function getTaskSlots(task: Task): string[] {
 const WeeklyCalendarView: React.FC = () => {
     const { addScheduleSlot, removeScheduleSlot } = useTasks();
     const { workspaces } = useWorkspaces();
-    const { theme } = useUIStore();
+    const { theme, currentWorkspaceId } = useUIStore();
     const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -120,8 +120,8 @@ const WeeklyCalendarView: React.FC = () => {
     }, [allTasks, weekDays]);
 
     const unscheduledTasks = useMemo(() =>
-        allTasks.filter(t => getTaskSlots(t).length === 0),
-        [allTasks]
+        allTasks.filter(t => getTaskSlots(t).length === 0 && (!currentWorkspaceId || t.workspace_id === currentWorkspaceId)),
+        [allTasks, currentWorkspaceId]
     );
 
     const handleSlotClick = async (dayIdx: number, hour: number) => {
@@ -268,9 +268,9 @@ const WeeklyCalendarView: React.FC = () => {
                                                     </span>
                                                     <button
                                                         onClick={(e) => handleUnschedule(task, slotIso, e)}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-white/80 hover:text-white"
+                                                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-white/80 hover:text-white p-1 -mr-1"
                                                     >
-                                                        <X size={10} />
+                                                        <X size={12} strokeWidth={3} />
                                                     </button>
                                                 </div>
                                                 {/* Workspace label */}
