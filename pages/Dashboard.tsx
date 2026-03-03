@@ -12,12 +12,13 @@ import useTasks from '../features/kanban/hooks/useTasks';
 import { generateProjectReportData } from '../services/geminiService';
 import { generatePremiumHTMLReport } from '../services/htmlReportService';
 import { generateBulkReportsZip } from '../services/bulkReportService';
+import AdminPanel from '../features/kanban/components/AdminPanel';
 import { supabase } from '../services/supabase';
 import {
     LogOut, Sun, Moon, Plus, Loader2, Sparkles, Mic, Home, CalendarDays,
     FolderOpen, User as UserIcon, Check, MoreHorizontal, ArrowUp,
     Users, TrendingUp, AlertCircle, ChevronDown, ChevronUp,
-    Download, LayoutDashboard, Clock, FileArchive
+    Download, LayoutDashboard, Clock, FileArchive, Lock
 } from 'lucide-react';
 
 // JS-based media query hook (reliable regardless of Tailwind version)
@@ -45,9 +46,12 @@ const Dashboard: React.FC = () => {
     const [isUrgentExpanded, setIsUrgentExpanded] = useState(false);
     const [isBulkGenerating, setIsBulkGenerating] = useState(false);
     const [bulkProgress, setBulkProgress] = useState({ percent: 0, name: '' });
+    const [showAdminPanel, setShowAdminPanel] = useState(false);
     const isDesktop = useIsDesktop();
 
     const { workspaces, isLoading: isLoadingWS } = useWorkspaces();
+
+    const isAdmin = session?.user?.email === 'diegogar11@gmail.com';
     const { tasks, fetchTasks } = useTasks();
 
     useEffect(() => {
@@ -177,6 +181,16 @@ const Dashboard: React.FC = () => {
                         >
                             <Download size={18} /> Descargar APK
                         </a>
+
+                        {/* Botón Panel Admin (Desktop) */}
+                        {isAdmin && (
+                            <button
+                                onClick={() => setShowAdminPanel(true)}
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontWeight: 700, fontSize: 14, border: '1px solid rgba(245,158,11,0.2)', cursor: 'pointer', boxSizing: 'border-box', transition: 'all 0.2s', marginTop: '8px' }}
+                            >
+                                <Lock size={18} /> Panel Admin
+                            </button>
+                        )}
 
                         {/* Bulk Report ZIP Download */}
                         <button
@@ -601,9 +615,15 @@ const Dashboard: React.FC = () => {
                             </button>
                         </li>
                         <li>
-                            <button className="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary transition-colors">
-                                <UserIcon size={22} /><span className="text-[10px] font-medium">Profile</span>
-                            </button>
+                            {isAdmin ? (
+                                <button onClick={() => setShowAdminPanel(true)} className="flex flex-col items-center gap-1 text-amber-500 hover:text-amber-600 transition-colors">
+                                    <Lock size={22} /><span className="text-[10px] font-bold">Admin</span>
+                                </button>
+                            ) : (
+                                <button className="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary transition-colors">
+                                    <UserIcon size={22} /><span className="text-[10px] font-medium">Profile</span>
+                                </button>
+                            )}
                         </li>
                     </ul>
                 </nav>
@@ -620,6 +640,8 @@ const Dashboard: React.FC = () => {
 
                 <TaskModal />
                 <WorkspaceManager />
+
+                {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
             </div>
         </div>
     );
