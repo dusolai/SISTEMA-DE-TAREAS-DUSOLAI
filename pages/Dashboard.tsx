@@ -343,8 +343,7 @@ const Dashboard: React.FC = () => {
                     </div>
                 )}
 
-                <TaskModal />
-                <WorkspaceManager />
+                {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
             </div>
         );
     }
@@ -640,9 +639,10 @@ const Dashboard: React.FC = () => {
 
                 <TaskModal />
                 <WorkspaceManager />
-
-                {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
             </div>
+
+            {/* Renderizar panel administrador fuera del contenedor overflow-hidden */}
+            {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
         </div>
     );
 };

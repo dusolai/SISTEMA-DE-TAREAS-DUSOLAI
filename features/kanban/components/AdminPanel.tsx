@@ -24,6 +24,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
+        console.log("AdminPanel: mount triggered");
         fetchUsers();
     }, []);
 
@@ -81,7 +82,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm sm:p-6 transition-opacity">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm sm:p-6 transition-opacity">
             <div className={`w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10 ${theme === 'dark' ? 'bg-[#0f1325]' : 'bg-white'}`}>
 
                 {/* Header */}
