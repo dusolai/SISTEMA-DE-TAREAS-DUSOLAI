@@ -4,6 +4,7 @@ import AudioRecorder from '../features/audio/components/AudioRecorder';
 import TaskModal from '../features/kanban/components/TaskModal';
 import WorkspaceManager from '../features/kanban/components/WorkspaceManager';
 import DashboardChart from '../features/dashboard/components/DashboardChart';
+import UrgentTasksPanel from '../features/kanban/components/UrgentTasksPanel';
 import WeeklyCalendarView from './WeeklyCalendarView';
 import useAuthStore from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
@@ -292,35 +293,7 @@ const Dashboard: React.FC = () => {
                                             </div>
 
                                             {/* Urgent Tasks */}
-                                            {urgentTasks.length > 0 && (
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                                                        <h3 style={{ fontSize: 14, fontWeight: 700, color: theme === 'dark' ? 'white' : '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                            <AlertCircle size={14} style={{ color: '#ef4444' }} /> Urgentes
-                                                        </h3>
-                                                        {(tasks?.filter(t => t.priority === 'high').length || 0) > 5 && (
-                                                            <button
-                                                                onClick={() => setShowAllUrgent(!showAllUrgent)}
-                                                                style={{ fontSize: 11, fontWeight: 700, color: '#5848e8', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                                                            >
-                                                                {showAllUrgent ? 'Ver menos' : 'Ver todo'}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                        {urgentTasks.map(task => (
-                                                            <div key={task.id}
-                                                                onClick={() => openTaskModal(task)}
-                                                                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: theme === 'dark' ? 'rgba(239,68,68,0.05)' : 'rgba(239,68,68,0.05)', border: '1px solid', borderColor: theme === 'dark' ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)', cursor: 'pointer' }}>
-                                                                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                                    <AlertCircle size={14} style={{ color: '#ef4444' }} />
-                                                                </div>
-                                                                <span style={{ fontSize: 12, fontWeight: 700, color: theme === 'dark' ? '#e2e8f0' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
+                                            <UrgentTasksPanel tasks={urgentTasks} onTaskClick={openTaskModal} />
                                         </div>
                                     </aside>
                                 )}
