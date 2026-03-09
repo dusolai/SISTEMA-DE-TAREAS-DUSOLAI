@@ -7,7 +7,8 @@ export const supabaseAdmin = (supabaseUrl && serviceRoleKey)
     ? createClient(supabaseUrl, serviceRoleKey, {
         auth: {
             autoRefreshToken: false,
-            persistSession: false
+            persistSession: false,
+            detectSessionInUrl: false
         }
     })
     : null;

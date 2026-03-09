@@ -1,5 +1,5 @@
 // Cambiamos el nombre de la versión para forzar a los navegadores a actualizar el Service Worker
-const CACHE_NAME = 'dualink-v2'; 
+const CACHE_NAME = 'dualink-v2';
 
 const urlsToCache = [
     '/',
@@ -32,7 +32,13 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Estrategia "Network First" (Red Primero) para la navegación (el index.html)
+    const url = new URL(event.request.url);
+
+    // FIX: Skip ALL requests to external origins (Supabase, APIs, etc.)
+    // This prevents "Response body is already used" errors
+    if (url.origin !== self.location.origin) return;
+
+    // Estrategia "Network First" para la navegación (el index.html)
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).catch(() => {
@@ -42,7 +48,7 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Estrategia "Stale While Revalidate" (Caché con actualización en segundo plano) para el resto
+    // Estrategia "Stale While Revalidate" para assets estáticos
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             const fetchPromise = fetch(event.request).then(networkResponse => {
