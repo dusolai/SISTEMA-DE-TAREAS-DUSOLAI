@@ -1,3 +1,4 @@
+// SW Sync: Manual fix for "Response body is already used" error on PC - 2026-03-09
 // Cambiamos el nombre de la versión para forzar a los navegadores a actualizar el Service Worker
 const CACHE_NAME = 'dualink-v2';
 
