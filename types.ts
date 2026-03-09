@@ -13,6 +13,15 @@ export interface HistoryEvent {
     user_email?: string;
 }
 
+export interface WorkSession {
+    id: string;
+    started_at: string;
+    ended_at: string | null;
+    duration_seconds: number;
+    comment?: string;
+    user_email?: string;
+}
+
 export interface Task {
     // --- Campos Originales Tuyos ---
     id: string;
@@ -39,6 +48,10 @@ export interface Task {
     notion_url?: string | null;
     drive_url?: string | null;
     subtasks?: Subtask[];
+
+    // Deep work
+    work_sessions?: WorkSession[];
+    total_work_seconds?: number;
 }
 
 export interface Subtask {

@@ -8,7 +8,7 @@ import DeepWorkTab from './DeepWorkTab';
 
 const TaskModal: React.FC = () => {
     const { isTaskModalOpen, taskModalData, closeTaskModal } = useUIStore();
-    const { createTask, updateTask, deleteTask } = useTasks();
+    const { createTask, updateTask, deleteTask, startWorkSession, stopWorkSession } = useTasks();
     const currentWorkspaceId = useUIStore((state) => state.currentWorkspaceId);
 
     const [title, setTitle] = useState('');
@@ -275,12 +275,10 @@ const TaskModal: React.FC = () => {
                         <DeepWorkTab
                             task={taskModalData}
                             onStartSession={async (taskId) => {
-                                // Logic is mainly handled in the DeepWorkTab component 
-                                // that calls supabase directly to modify the task.
-                                // We may want to refetch or manually update local state in useTasks
+                                await startWorkSession(taskId);
                             }}
                             onStopSession={async (taskId, comment) => {
-                                // Logic is fully handled in DeepWorkTab component.
+                                await stopWorkSession(taskId, comment);
                             }}
                         />
                     ) : (

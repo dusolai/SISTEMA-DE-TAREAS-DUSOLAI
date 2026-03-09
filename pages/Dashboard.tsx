@@ -14,6 +14,7 @@ import { generateProjectReportData } from '../services/geminiService';
 import { generatePremiumHTMLReport } from '../services/htmlReportService';
 import { generateBulkReportsZip } from '../services/bulkReportService';
 import AdminPanel from '../features/kanban/components/AdminPanel';
+import FloatingTimer from '../features/kanban/components/FloatingTimer';
 import { supabase } from '../services/supabase';
 import {
     LogOut, Sun, Moon, Plus, Loader2, Sparkles, Mic, Home, CalendarDays,
@@ -320,6 +321,7 @@ const Dashboard: React.FC = () => {
 
                 <TaskModal />
                 <WorkspaceManager />
+                <FloatingTimer />
             </div>
         );
     }
@@ -615,6 +617,7 @@ const Dashboard: React.FC = () => {
 
                 <TaskModal />
                 <WorkspaceManager />
+                <FloatingTimer />
             </div>
 
             {/* Renderizar panel administrador fuera del contenedor overflow-hidden */}

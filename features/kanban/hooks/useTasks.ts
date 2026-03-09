@@ -14,6 +14,8 @@ interface TasksState {
     scheduleTask: (id: string, scheduledAt: string | null) => Promise<void>;
     addScheduleSlot: (id: string, isoString: string) => Promise<void>;
     removeScheduleSlot: (id: string, isoString: string) => Promise<void>;
+    startWorkSession: (taskId: string) => Promise<boolean>;
+    stopWorkSession: (taskId: string, comment: string) => Promise<boolean>;
 }
 
 const generateCommitMessage = (updates: Partial<Task>, oldTask?: Task): string => {
@@ -194,6 +196,74 @@ const useTasks = create<TasksState>((set, get) => ({
             ),
         }));
         await supabase.from('tasks').update({ scheduled_slots: newSlots, scheduled_at: newSlots[0] || null }).eq('id', id);
+    },
+
+    startWorkSession: async (taskId) => {
+        const task = get().tasks.find(t => t.id === taskId);
+        const user = useAuthStore.getState().session?.user;
+        if (!task || !user) return false;
+
+        const newSession = {
+            id: crypto.randomUUID(),
+            started_at: new Date().toISOString(),
+            ended_at: null,
+            duration_seconds: 0,
+            user_email: user.email
+        };
+
+        const updatedSessions = [...(task.work_sessions || []), newSession];
+
+        set((state) => ({
+            tasks: state.tasks.map(t => t.id === taskId ? { ...t, work_sessions: updatedSessions } : t)
+        }));
+
+        const { error } = await supabase.from('tasks').update({ work_sessions: updatedSessions }).eq('id', taskId);
+        if (error) {
+            console.error('Error starting work session:', error);
+            return false;
+        }
+        return true;
+    },
+
+    stopWorkSession: async (taskId, comment) => {
+        const task = get().tasks.find(t => t.id === taskId);
+        if (!task) return false;
+
+        const sessions = task.work_sessions || [];
+        const activeSessionIndex = sessions.findIndex(s => s.ended_at === null);
+
+        if (activeSessionIndex === -1) return false;
+
+        const activeSession = sessions[activeSessionIndex];
+        const endedAt = new Date().toISOString();
+        const durationSeconds = Math.floor((new Date(endedAt).getTime() - new Date(activeSession.started_at).getTime()) / 1000);
+
+        const updatedSession = {
+            ...activeSession,
+            ended_at: endedAt,
+            duration_seconds: durationSeconds,
+            comment
+        };
+
+        const updatedSessions = [...sessions];
+        updatedSessions[activeSessionIndex] = updatedSession;
+
+        const totalWorkSeconds = (task.total_work_seconds || 0) + durationSeconds;
+
+        set((state) => ({
+            tasks: state.tasks.map(t => t.id === taskId ? { ...t, work_sessions: updatedSessions, total_work_seconds: totalWorkSeconds } : t)
+        }));
+
+        const { error } = await supabase.from('tasks').update({
+            work_sessions: updatedSessions,
+            total_work_seconds: totalWorkSeconds
+        }).eq('id', taskId);
+
+        if (error) {
+            console.error('Error stopping work session:', error);
+            return false;
+        }
+        return true;
     },
 }));
 
