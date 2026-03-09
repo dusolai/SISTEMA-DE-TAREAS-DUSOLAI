@@ -317,6 +317,9 @@ const Dashboard: React.FC = () => {
                 )}
 
                 {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
+
+                <TaskModal />
+                <WorkspaceManager />
             </div>
         );
     }
