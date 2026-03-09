@@ -11,57 +11,26 @@ const formatDuration = (totalSeconds: number): string => {
     return `${m}m ${s.toString().padStart(2, '0')}s`;
 };
 
-const FloatingTimer: React.FC = () => {
-    const { tasks, stopWorkSession } = useTasks();
-    const { openTaskModal, isTaskModalOpen, theme } = useUIStore();
-    const isDark = theme === 'dark';
-
-    // Find the task that has an active session
-    let activeTask = null;
-    let activeSession = null;
-
-    for (const task of tasks) {
-        const session = task.work_sessions?.find(s => s.ended_at === null);
-        if (session) {
-            activeTask = task;
-            activeSession = session;
-            break;
-        }
-    }
-
+const ActiveTimerItem: React.FC<{
+    task: any;
+    session: any;
+    isDark: boolean;
+    onStop: (taskId: string) => void;
+    onClick: () => void;
+}> = ({ task, session, isDark, onStop, onClick }) => {
     const [elapsed, setElapsed] = useState(0);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Live timer
     useEffect(() => {
-        if (activeSession) {
-            const calcElapsed = () => Math.floor((Date.now() - new Date(activeSession.started_at).getTime()) / 1000);
-            setElapsed(calcElapsed());
-            intervalRef.current = setInterval(() => setElapsed(calcElapsed()), 1000);
-        } else {
-            setElapsed(0);
-        }
-        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [activeSession?.id]);
-
-    // Don't show if modal is open to avoid double timers, or if no active session
-    if (!activeTask || !activeSession || isTaskModalOpen) return null;
-
-    const handleStop = async () => {
-        const comment = prompt('Sesión Deep Work finalizada. ¿Qué lograste avanzar en esta sesión?');
-        if (comment !== null) { // User didn't cancel the prompt
-            await stopWorkSession(activeTask.id, comment);
-        }
-    };
-
-    const handleOpenTask = () => {
-        openTaskModal(activeTask);
-    };
+        const calcElapsed = () => Math.floor((Date.now() - new Date(session.started_at).getTime()) / 1000);
+        setElapsed(calcElapsed());
+        const intervalId = setInterval(() => setElapsed(calcElapsed()), 1000);
+        return () => clearInterval(intervalId);
+    }, [session.id, session.started_at]);
 
     return (
-        <div className={`fixed bottom-6 right-6 z-40 p-3 rounded-2xl shadow-2xl border-2 border-green-500/50 flex items-center gap-4 transition-all hover:scale-105 active:scale-95 cursor-pointer
-            ${isDark ? 'bg-[#0f1325] shadow-green-900/20' : 'bg-white shadow-green-500/20'}`}
-            onClick={handleOpenTask}
+        <div
+            onClick={onClick}
+            className={`flex items-center gap-4 rounded-xl p-2 transition-all hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer`}
         >
             <div className={`p-2 rounded-xl flex items-center justify-center animate-pulse ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
                 <Timer size={20} />
@@ -75,19 +44,62 @@ const FloatingTimer: React.FC = () => {
                     </p>
                 </div>
                 <p className={`text-xs truncate max-w-[150px] mt-1 font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {activeTask.title}
+                    {task.title}
                 </p>
             </div>
 
             <div className="flex flex-col gap-1 ml-2 border-l pl-3 border-green-500/20">
                 <button
-                    onClick={(e) => { e.stopPropagation(); handleStop(); }}
+                    onClick={(e) => { e.stopPropagation(); onStop(task.id); }}
                     className={`p-2 rounded-lg transition-colors group ${isDark ? 'hover:bg-red-500/20' : 'hover:bg-red-50'}`}
                     title="Detener Sesión"
                 >
                     <Square size={16} className={`${isDark ? 'text-red-400 group-hover:text-red-300' : 'text-red-500 group-hover:text-red-600'}`} fill="currentColor" />
                 </button>
             </div>
+        </div>
+    );
+};
+
+const FloatingTimer: React.FC = () => {
+    const { tasks, stopWorkSession } = useTasks();
+    const { openTaskModal, isTaskModalOpen, theme } = useUIStore();
+    const isDark = theme === 'dark';
+
+    // Find ALL tasks that have an active session
+    const activeTimers: { task: any, session: any }[] = [];
+
+    for (const task of tasks) {
+        const session = task.work_sessions?.find((s: any) => s.ended_at === null);
+        if (session) {
+            activeTimers.push({ task, session });
+        }
+    }
+
+    // Don't show if modal is open to avoid double timers, or if no active sessions
+    if (activeTimers.length === 0 || isTaskModalOpen) return null;
+
+    const handleStop = async (taskId: string) => {
+        const comment = prompt('Sesión Deep Work finalizada. ¿Qué lograste avanzar en esta sesión?');
+        if (comment !== null) {
+            await stopWorkSession(taskId, comment);
+        }
+    };
+
+    return (
+        <div className={`fixed bottom-6 right-6 z-40 p-2 rounded-2xl shadow-2xl border-2 border-green-500/50 flex flex-col gap-2 transition-all 
+        ${isDark ? 'bg-[#0f1325] shadow-green-900/20' : 'bg-white shadow-green-500/20'}`}
+        >
+            {activeTimers.map(({ task, session }) => (
+                <ActiveTimerItem
+                    key={session.id}
+                    task={task}
+                    session={session}
+                    isDark={isDark}
+                    onStop={handleStop}
+                    onClick={() => openTaskModal(task)}
+                />
+            ))}
         </div>
     );
 };
