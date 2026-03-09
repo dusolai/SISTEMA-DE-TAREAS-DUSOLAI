@@ -4,6 +4,7 @@ import { useUIStore } from '../../../store/uiStore';
 import useTasks from '../hooks/useTasks';
 import { Task, Subtask } from '../../../types';
 import { generateSubtasksFromText } from '../../../services/geminiService';
+import DeepWorkTab from './DeepWorkTab';
 
 const TaskModal: React.FC = () => {
     const { isTaskModalOpen, taskModalData, closeTaskModal } = useUIStore();
@@ -19,7 +20,7 @@ const TaskModal: React.FC = () => {
     const [subtasks, setSubtasks] = useState<Subtask[]>([]);
     const [newSubtaskText, setNewSubtaskText] = useState('');
     const [isGeneratingSubtasks, setIsGeneratingSubtasks] = useState(false);
-    const [activeTab, setActiveTab] = useState<'details' | 'subtasks' | 'history'>('details');
+    const [activeTab, setActiveTab] = useState<'details' | 'subtasks' | 'history' | 'deepwork'>('details');
 
     useEffect(() => {
         if (taskModalData) {
@@ -151,10 +152,11 @@ const TaskModal: React.FC = () => {
                 </div>
 
                 {taskModalData && (
-                    <div className="flex border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-                        <button onClick={() => setActiveTab('details')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'details' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><FileText size={16} className="inline mr-2" />Detalles</button>
-                        <button onClick={() => setActiveTab('subtasks')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'subtasks' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><CheckSquare size={16} className="inline mr-2" />Subtareas {subtasks.length > 0 && `(${completedSubtasks}/${subtasks.length})`}</button>
-                        <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'history' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><Activity size={16} className="inline mr-2" />Historial</button>
+                    <div className="flex border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-x-auto custom-scrollbar">
+                        <button onClick={() => setActiveTab('details')} className={`flex-1 py-3 px-2 min-w-max text-sm font-medium ${activeTab === 'details' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><FileText size={16} className="inline mr-2" />Detalles</button>
+                        <button onClick={() => setActiveTab('subtasks')} className={`flex-1 py-3 px-2 min-w-max text-sm font-medium ${activeTab === 'subtasks' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><CheckSquare size={16} className="inline mr-2" />Subtareas {subtasks.length > 0 && `(${completedSubtasks}/${subtasks.length})`}</button>
+                        <button onClick={() => setActiveTab('deepwork')} className={`flex-1 py-3 px-2 min-w-max text-sm font-medium ${activeTab === 'deepwork' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><Activity size={16} className="inline mr-2" />Deep Work</button>
+                        <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 px-2 min-w-max text-sm font-medium ${activeTab === 'history' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><Activity size={16} className="inline mr-2" />Historial</button>
                     </div>
                 )}
 
@@ -269,6 +271,18 @@ const TaskModal: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                    ) : activeTab === 'deepwork' && taskModalData ? (
+                        <DeepWorkTab
+                            task={taskModalData}
+                            onStartSession={async (taskId) => {
+                                // Logic is mainly handled in the DeepWorkTab component 
+                                // that calls supabase directly to modify the task.
+                                // We may want to refetch or manually update local state in useTasks
+                            }}
+                            onStopSession={async (taskId, comment) => {
+                                // Logic is fully handled in DeepWorkTab component.
+                            }}
+                        />
                     ) : (
                         <div className="space-y-4">
                             {taskModalData?.history?.slice().reverse().map((h, i) => (

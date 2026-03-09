@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabaseAdmin } from '../../../services/supabaseAdmin';
-import { X, Lock, User, RefreshCw, KeyRound, AlertTriangle } from 'lucide-react';
+import { X, Lock, User, RefreshCw, KeyRound, AlertTriangle, Download } from 'lucide-react';
 import { useUIStore } from '../../../store/uiStore';
+import WorkReportExport from './WorkReportExport';
 
 interface AdminPanelProps {
     onClose: () => void;
@@ -22,6 +23,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
     const [newPassword, setNewPassword] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [showReportExport, setShowReportExport] = useState(false);
 
     useEffect(() => {
         console.log("AdminPanel: mount triggered");
@@ -124,6 +126,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Usuarios</p>
                                     <p className="text-2xl font-black text-slate-900 dark:text-white">{users.length}</p>
                                 </div>
+                                <button
+                                    onClick={() => setShowReportExport(true)}
+                                    className="p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 bg-indigo-50 dark:bg-indigo-900/10 flex flex-col items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 hover:scale-[1.02] transition-all cursor-pointer group"
+                                >
+                                    <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                        <Download size={20} />
+                                    </div>
+                                    <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest text-center">Exportar<br />Actividad Diaria</p>
+                                </button>
                             </div>
 
                             {/* User List */}
@@ -196,6 +207,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                     )}
                 </div>
             </div>
+
+            {showReportExport && <WorkReportExport onClose={() => setShowReportExport(false)} />}
         </div>
     );
 };
