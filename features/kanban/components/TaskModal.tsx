@@ -8,8 +8,11 @@ import DeepWorkTab from './DeepWorkTab';
 
 const TaskModal: React.FC = () => {
     const { isTaskModalOpen, taskModalData, closeTaskModal } = useUIStore();
-    const { createTask, updateTask, deleteTask, startWorkSession, stopWorkSession } = useTasks();
+    const { tasks, createTask, updateTask, deleteTask, startWorkSession, stopWorkSession } = useTasks();
     const currentWorkspaceId = useUIStore((state) => state.currentWorkspaceId);
+
+    // Get the most up-to-date task to ensure UI (like Deep Work) updates instantly
+    const liveTask = taskModalData ? tasks.find(t => t.id === taskModalData.id) || taskModalData : null;
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -151,7 +154,7 @@ const TaskModal: React.FC = () => {
                     <button onClick={closeTaskModal} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500"><X size={20} /></button>
                 </div>
 
-                {taskModalData && (
+                {liveTask && (
                     <div className="flex border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-x-auto custom-scrollbar">
                         <button onClick={() => setActiveTab('details')} className={`flex-1 py-3 px-2 min-w-max text-sm font-medium ${activeTab === 'details' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><FileText size={16} className="inline mr-2" />Detalles</button>
                         <button onClick={() => setActiveTab('subtasks')} className={`flex-1 py-3 px-2 min-w-max text-sm font-medium ${activeTab === 'subtasks' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-500'}`}><CheckSquare size={16} className="inline mr-2" />Subtareas {subtasks.length > 0 && `(${completedSubtasks}/${subtasks.length})`}</button>
@@ -271,9 +274,9 @@ const TaskModal: React.FC = () => {
                                 )}
                             </div>
                         </div>
-                    ) : activeTab === 'deepwork' && taskModalData ? (
+                    ) : activeTab === 'deepwork' && liveTask ? (
                         <DeepWorkTab
-                            task={taskModalData}
+                            task={liveTask}
                             onStartSession={async (taskId) => {
                                 await startWorkSession(taskId);
                             }}
@@ -283,10 +286,10 @@ const TaskModal: React.FC = () => {
                         />
                     ) : (
                         <div className="space-y-4">
-                            {taskModalData?.history?.slice().reverse().map((h, i) => (
+                            {liveTask?.history?.slice().reverse().map((h, i) => (
                                 <div key={i} className="flex gap-3 text-sm"><div className="mt-1"><GitCommit size={14} /></div><div><p className="font-medium dark:text-gray-200">{h.details}</p><p className="text-xs text-gray-500">{formatDate(h.timestamp)}</p></div></div>
                             ))}
-                            {(!taskModalData?.history?.length) && <p className="text-gray-500 text-center">Sin historial</p>}
+                            {(!liveTask?.history?.length) && <p className="text-gray-500 text-center">Sin historial</p>}
                         </div>
                     )}
                 </div>
