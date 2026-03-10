@@ -62,14 +62,18 @@ const ActiveTimerItem: React.FC<{
 };
 
 const FloatingTimer: React.FC = () => {
-    const { tasks, stopWorkSession } = useTasks();
+    const { globalActiveTasks, fetchGlobalActiveTasks, stopWorkSession } = useTasks();
     const { openTaskModal, isTaskModalOpen, theme } = useUIStore();
     const isDark = theme === 'dark';
+
+    useEffect(() => {
+        fetchGlobalActiveTasks();
+    }, [fetchGlobalActiveTasks]);
 
     // Find ALL tasks that have an active session
     const activeTimers: { task: any, session: any }[] = [];
 
-    for (const task of tasks) {
+    for (const task of globalActiveTasks) {
         const session = task.work_sessions?.find((s: any) => s.ended_at === null);
         if (session) {
             activeTimers.push({ task, session });

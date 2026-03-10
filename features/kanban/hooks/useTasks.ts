@@ -16,6 +16,8 @@ interface TasksState {
     removeScheduleSlot: (id: string, isoString: string) => Promise<void>;
     startWorkSession: (taskId: string) => Promise<boolean>;
     stopWorkSession: (taskId: string, comment: string) => Promise<boolean>;
+    globalActiveTasks: Task[];
+    fetchGlobalActiveTasks: () => Promise<void>;
 }
 
 const generateCommitMessage = (updates: Partial<Task>, oldTask?: Task): string => {
@@ -28,6 +30,7 @@ const generateCommitMessage = (updates: Partial<Task>, oldTask?: Task): string =
 
 const useTasks = create<TasksState>((set, get) => ({
     tasks: [],
+    globalActiveTasks: [],
     isLoading: false,
 
     fetchTasks: async (workspaceId) => {
@@ -134,7 +137,8 @@ const useTasks = create<TasksState>((set, get) => ({
             }
 
             set((state) => ({
-                tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...finalUpdates } : t))
+                tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...finalUpdates } : t)),
+                globalActiveTasks: state.globalActiveTasks.map((t) => (t.id === id ? { ...t, ...finalUpdates } : t))
             }));
             console.log('Task updated successfully');
             return true;
@@ -145,7 +149,10 @@ const useTasks = create<TasksState>((set, get) => ({
     },
 
     deleteTask: async (id) => {
-        set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+        set((state) => ({
+            tasks: state.tasks.filter((t) => t.id !== id),
+            globalActiveTasks: state.globalActiveTasks.filter((t) => t.id !== id)
+        }));
         await supabase.from('tasks').delete().eq('id', id);
     },
 
@@ -169,6 +176,24 @@ const useTasks = create<TasksState>((set, get) => ({
         } catch (error) {
             console.error('Error fetching all tasks:', error);
             return [];
+        }
+    },
+
+    fetchGlobalActiveTasks: async () => {
+        try {
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*')
+                .not('work_sessions', 'is', null);
+
+            if (error) throw error;
+
+            const active = (data || []).filter(t =>
+                t.work_sessions?.some(s => s.ended_at === null)
+            );
+            set({ globalActiveTasks: active });
+        } catch (error) {
+            console.error('Error fetching global active tasks:', error);
         }
     },
 
@@ -212,9 +237,11 @@ const useTasks = create<TasksState>((set, get) => ({
         };
 
         const updatedSessions = [...(task.work_sessions || []), newSession];
+        const updatedTask = { ...task, work_sessions: updatedSessions };
 
         set((state) => ({
-            tasks: state.tasks.map(t => t.id === taskId ? { ...t, work_sessions: updatedSessions } : t)
+            tasks: state.tasks.map(t => t.id === taskId ? updatedTask : t),
+            globalActiveTasks: [...state.globalActiveTasks.filter(t => t.id !== taskId), updatedTask]
         }));
 
         const { error } = await supabase.from('tasks').update({ work_sessions: updatedSessions }).eq('id', taskId);
@@ -226,7 +253,10 @@ const useTasks = create<TasksState>((set, get) => ({
     },
 
     stopWorkSession: async (taskId, comment) => {
-        const task = get().tasks.find(t => t.id === taskId);
+        let task = get().tasks.find(t => t.id === taskId);
+        if (!task) {
+            task = get().globalActiveTasks.find(t => t.id === taskId);
+        }
         if (!task) return false;
 
         const sessions = task.work_sessions || [];
@@ -250,8 +280,11 @@ const useTasks = create<TasksState>((set, get) => ({
 
         const totalWorkSeconds = (task.total_work_seconds || 0) + durationSeconds;
 
+        const updatedTask = { ...task, work_sessions: updatedSessions, total_work_seconds: totalWorkSeconds };
+
         set((state) => ({
-            tasks: state.tasks.map(t => t.id === taskId ? { ...t, work_sessions: updatedSessions, total_work_seconds: totalWorkSeconds } : t)
+            tasks: state.tasks.map(t => t.id === taskId ? updatedTask : t),
+            globalActiveTasks: state.globalActiveTasks.filter(t => t.id !== taskId)
         }));
 
         const { error } = await supabase.from('tasks').update({
