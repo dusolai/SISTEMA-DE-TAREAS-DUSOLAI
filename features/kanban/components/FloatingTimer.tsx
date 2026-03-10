@@ -76,8 +76,8 @@ const FloatingTimer: React.FC = () => {
         }
     }
 
-    // Don't show if modal is open to avoid double timers, or if no active sessions
-    if (activeTimers.length === 0 || isTaskModalOpen) return null;
+    // Don't show if there are no active sessions
+    if (activeTimers.length === 0) return null;
 
     const handleStop = async (taskId: string) => {
         const comment = prompt('Sesión Deep Work finalizada. ¿Qué lograste avanzar en esta sesión?');
@@ -87,7 +87,7 @@ const FloatingTimer: React.FC = () => {
     };
 
     return (
-        <div className={`fixed bottom-6 right-6 z-40 p-2 rounded-2xl shadow-2xl border-2 border-green-500/50 flex flex-col gap-2 transition-all 
+        <div className={`fixed bottom-6 right-6 z-50 p-2 rounded-2xl shadow-2xl border-2 border-green-500/50 flex flex-col gap-2 transition-all 
         ${isDark ? 'bg-[#0f1325] shadow-green-900/20' : 'bg-white shadow-green-500/20'}`}
         >
             {activeTimers.map(({ task, session }) => (
