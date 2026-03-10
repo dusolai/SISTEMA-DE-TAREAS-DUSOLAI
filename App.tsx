@@ -5,18 +5,19 @@ import AuthPage from './features/auth/AuthPage';
 import Dashboard from './pages/Dashboard';
 import { supabase } from './services/supabase';
 
+import MobileQuickAdd from './features/kanban/components/MobileQuickAdd';
+
 const App: React.FC = () => {
   const { session, setSession } = useAuthStore();
-  const theme = useUIStore((state) => state.theme); // Leemos el tema actual
+  const theme = useUIStore((state) => state.theme);
+  const [currentHash, setCurrentHash] = React.useState(window.location.hash);
 
-  // EFECTO: Sincronizar tema con el DOM (HTML tag)
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
   }, [theme]);
 
-  // EFECTO: Auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -31,10 +32,25 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [setSession]);
 
+  useEffect(() => {
+    const handleHashChange = () => setCurrentHash(window.location.hash);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Determine what to render based on auth and hash
+  let content = <AuthPage />;
+  if (session) {
+    if (currentHash === '#/add') {
+      content = <MobileQuickAdd />;
+    } else {
+      content = <Dashboard key={session.user.id} />;
+    }
+  }
+
   return (
-    // Quitamos las clases hardcodeadas de aquí porque ya están en el body (index.css)
     <div className="min-h-screen font-sans">
-      {!session ? <AuthPage /> : <Dashboard key={session.user.id} />}
+      {content}
     </div>
   );
 };

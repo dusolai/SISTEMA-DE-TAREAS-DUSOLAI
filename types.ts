@@ -27,7 +27,7 @@ export interface Task {
     id: string;
     created_at: string;
     title: string;
-    status: 'todo' | 'doing' | 'review' | 'done';
+    status: 'inbox' | 'todo' | 'doing' | 'review' | 'done';
     priority: 'low' | 'medium' | 'high';
     project_id: string | null;
     description: string | null;
@@ -74,6 +74,7 @@ export interface AiExtractedData {
 }
 
 export const KANBAN_COLUMNS: Array<{ id: Task['status'], title: string }> = [
+    { id: 'inbox', title: '📥 Buzón' },
     { id: 'todo', title: 'Por Hacer' },
     { id: 'doing', title: 'En Progreso' },
     { id: 'review', title: 'Revisión' },
