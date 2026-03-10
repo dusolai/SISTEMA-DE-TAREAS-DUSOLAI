@@ -47,6 +47,7 @@ export interface Task {
     scheduled_slots?: string[]; // Array of ISO strings for multi-hour scheduling
     notion_url?: string | null;
     drive_url?: string | null;
+    github_url?: string | null;
     subtasks?: Subtask[];
 
     // Deep work

@@ -52,6 +52,12 @@ const WorkReportExport: React.FC<WorkReportExportProps> = ({ onClose }) => {
 
         setIsGenerating(true);
         try {
+            // Fetch all workspaces to map IDs to names
+            const { data: workspacesData, error: wsError } = await supabase
+                .from('workspaces')
+                .select('id, name');
+            if (wsError) throw wsError;
+
             // Fetch ALL tasks (we need to filter by work_sessions)
             const { data: allTasks, error } = await supabase
                 .from('tasks')
@@ -60,6 +66,7 @@ const WorkReportExport: React.FC<WorkReportExportProps> = ({ onClose }) => {
 
             if (error) throw error;
 
+            const workspacesMap = new Map(workspacesData?.map(ws => [ws.id, ws.name]));
             const tasks: Task[] = allTasks || [];
             const targetDate = new Date(selectedDate);
             const dayStart = new Date(targetDate); dayStart.setHours(0, 0, 0, 0);
@@ -89,7 +96,7 @@ const WorkReportExport: React.FC<WorkReportExportProps> = ({ onClose }) => {
             const grandTotal = reportSections.reduce((sum, r) => sum + r.totalSec, 0);
 
             // Generate HTML Report
-            const html = buildReportHTML(selectedEmail, selectedDate, reportSections, grandTotal);
+            const html = buildReportHTML(selectedEmail, selectedDate, reportSections, grandTotal, workspacesMap);
 
             // Download
             const blob = new Blob([html], { type: 'text/html' });
@@ -112,14 +119,18 @@ const WorkReportExport: React.FC<WorkReportExportProps> = ({ onClose }) => {
         email: string,
         date: string,
         sections: { task: Task; sessions: WorkSession[]; totalSec: number }[],
-        grandTotal: number
+        grandTotal: number,
+        workspacesMap: Map<string, string>
     ): string => {
         const dateFormatted = new Date(date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
         const taskRows = sections.map(({ task, sessions, totalSec }) => `
             <div style="background:#f8fafc;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid #e2e8f0;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <h3 style="margin:0;font-size:16px;font-weight:800;color:#0f172a;">${task.title}</h3>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                    <div>
+                        <h3 style="margin:0;font-size:16px;font-weight:800;color:#0f172a;">${task.title}</h3>
+                        ${task.workspace_id ? `<span style="font-size:12px;font-weight:600;color:#6366f1;display:block;margin-top:4px;">📁 ${workspacesMap.get(task.workspace_id) || 'Workspace Desconocido'}</span>` : ''}
+                    </div>
                     <span style="background:#6366f1;color:white;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;">${formatDuration(totalSec)}</span>
                 </div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
