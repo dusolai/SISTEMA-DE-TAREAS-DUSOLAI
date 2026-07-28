@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secretos locales — NUNCA subir (ya paso una vez)
+.env
+.env.local
+.env.*.local
